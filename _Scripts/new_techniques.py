@@ -20,16 +20,17 @@ def gridWorld(dims):
     GW = np.ones(dims)
     m = dims[0]
     n = dims[1]
+    boundary_color = 0.97 # Red on Spectral color map
     for i in range(m): 
         for j in range(n): 
             if i == 0: 
-                GW[i][j] = 0
+                GW[i][j] = boundary_color
             elif i == m-1: 
-                GW[i][j] = 0
+                GW[i][j] = boundary_color
             elif j == 0: 
-                GW[i][j] = 0
+                GW[i][j] = boundary_color
             elif j == n-1: 
-                GW[i][j] = 0
+                GW[i][j] = boundary_color
     return GW
 
 # Randomly Allocate an Agent in a GridWorld
@@ -54,14 +55,14 @@ def placeReward(GW, agent_pos):
 # __MAIN__
 ############
 
-for i in range(0,5):
+for i in range(0,1):
     # Initilialise GridWorld
     GW = gridWorld((7,7))
     GW, agent_position = placeAgent(GW)
     GW = placeReward(GW, agent_position)
     
     # Display matrix
-    plt.matshow(GW, cmap = 'hot', interpolation='none', vmin=0, vmax=1)
+    plt.matshow(GW, cmap = 'spectral', interpolation='none', vmin=0, vmax=1)
     
     # Re-centre pixels such that the grid sepparates them as desired
     plt.gca().set_xticks([x - 0.5 for x in plt.gca().get_xticks()][1:], minor='true')
