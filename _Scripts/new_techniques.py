@@ -11,7 +11,11 @@ Created on Tue Jan 22 09:31:09 2019
 #--------------------------------------------------
 
 import numpy as np
+import matplotlib
+matplotlib.use('TkAgg')
 import matplotlib.pyplot as plt
+
+
 
 # Create a Gridworld
 def gridWorld(dims):
@@ -20,7 +24,7 @@ def gridWorld(dims):
     GW = np.ones(dims)
     m = dims[0]
     n = dims[1]
-    boundary_color = 0.97 # Red on Spectral color map
+    boundary_color = 0.95 # Red on Spectral color map
     for i in range(m): 
         for j in range(n): 
             if i == 0: 
@@ -62,11 +66,13 @@ for i in range(0,1):
     GW = placeReward(GW, agent_position)
     
     # Display matrix
-    plt.matshow(GW, cmap = 'spectral', interpolation='none', vmin=0, vmax=1)
+    plt.matshow(GW, cmap = 'nipy_spectral', interpolation='none', vmin=0, vmax=1)
+    #plt.grid()
     
     # Re-centre pixels such that the grid sepparates them as desired
     plt.gca().set_xticks([x - 0.5 for x in plt.gca().get_xticks()][1:], minor='true')
     plt.gca().set_yticks([y - 0.5 for y in plt.gca().get_yticks()][1:], minor='true')
     plt.grid(which='minor')
+    plt.show()
 
 
