@@ -76,14 +76,14 @@ class gridWorld:
         self.GW[self.reward_position[0]][self.reward_position[1]] = self.reward_color
     
     # F4: Print the GridWorld
-    def print(self):
+    def render(self):
+        print('FUNCTION CALL: render(self)')
         plt.matshow(self.GW, 
                     cmap = self.colormap,
                     interpolation = 'none',
                     vmin = 0,
                     vmax = 1
                     )
-
         # Re-centre pixels such that the grid sepparates them as desired
         # plt.gca().set_xticks([x - 0.5 for x in plt.gca().get_xticks()][1:], minor='true')
         # plt.gca().set_yticks([y - 0.5 for y in plt.gca().get_yticks()][1:], minor='true')

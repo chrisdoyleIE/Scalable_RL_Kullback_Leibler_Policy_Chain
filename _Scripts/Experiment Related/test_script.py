@@ -10,6 +10,12 @@
 
 import grid_world as gw
 
-gridWorld = gw.gridWorld((7,7),'nipy_spectral',0.5,0.5,0.5)
-gridWorld.agent__init__()
-gridWorld.print()
+env = gw.gridWorld((7,7),
+                        colormap = 'nipy_spectral',
+                        boundary_col = 0.95,
+                        agent_col = 0.25,
+                        reward_col = 0.75)
+
+env.agent__init__()
+env.reward__init__()
+env.render()
