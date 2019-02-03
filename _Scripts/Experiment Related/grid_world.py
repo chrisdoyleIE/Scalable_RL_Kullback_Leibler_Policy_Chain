@@ -27,6 +27,8 @@ import os
 import imageio
 import time
 import datetime
+import uuid
+
 
 
 #print('IMPORT: grid_world.py')
@@ -51,7 +53,7 @@ class GridWorldEnv:
     def __init__(self):
 
         # Initialise Attributes
-        self.dims = np.array([7,7])
+        self.dims = np.array([12,12])
         self.GW = np.ones(self.dims) # default value of grid is 1
         self.colormap = 'nipy_spectral'
         self.boundary_value = 0.95
@@ -71,14 +73,14 @@ class GridWorldEnv:
         self.viewer = None
         self.state = None
         self.steps_remaining = 20
-
+        self.frame_number = 0
 
     def seed(self, seed=None):
         self.np_random, seed = seeding.np_random(seed)
         return [seed]
 
-
     def step(self, action):
+
         assert self.action_space.contains(action), "%r (%s) invalid"%(action, type(action))
         agent_position = self.state
         reward = 0
@@ -86,15 +88,15 @@ class GridWorldEnv:
         # Set Tile Agent has Left to Default Value
         self.GW[ self.state[0] ][ self.state[1] ] = 1
 
-        # Take Action to update Agent Position
-        if(action==0): self.state = [agent_position[0], agent_position[1]+1] # UP
-        if(action==1): self.state = [agent_position[0], agent_position[1]-1] # DOWN
-        if(action==2): self.state = [agent_position[0]-1, agent_position[1]] # LEFT
-        if(action==3): self.state = [agent_position[0]+1, agent_position[1]] # RIGHT
-        print('AGENT: ', self.state)
+        # Take Action to update Agent Position, +/- 1 based on matshow() grid co-ordinates
+        if(action==0): self.state = [agent_position[0] -1, agent_position[1]] # UP
+        if(action==1): self.state = [agent_position[0] +1, agent_position[1]] # DOWN
+        if(action==2): self.state = [agent_position[0], agent_position[1] -1] # LEFT
+        if(action==3): self.state = [agent_position[0], agent_position[1] +1] # RIGHT
+        #print('AGENT: ', self.state, ', VALUE = ', self.GW[ self.state[0] ][ self.state[1] ],', ACTION = ',action )
 
         # Check if Done
-        done = bool( self.GW[self.state[0]][self.state[1]] == self.boundary_value)
+        done = bool( self.GW[self.state[0]][self.state[1]] == self.boundary_value )
 
         self.steps_remaining -= 1
 
@@ -103,22 +105,41 @@ class GridWorldEnv:
             if (self.GW[ self.state[0] ][ self.state[1] ] == self.reward_value):
                 reward = 5
                 done = True
+                print('REWARD')
             # Ran out of Steps
             elif self.steps_remaining == 0:
                 done = True
                 reward = -10
+                print('STEPS')
             # Otherwise just continue onwards
             else:
                 reward = -1
         # Agent has gone over the boundary
         else:
             reward = -10
+            print('BOUNDARY')
 
         # Update GridWorld to Show Agent Position
         self.GW[self.state[0]][self.state[1]] = self.agent_value
 
         return np.array(self.state), reward, done, {}
 
+    def debug_step(self,action):
+
+        agent_position = self.state
+        # Set Tile Agent has Left to Default Value
+        self.GW[ self.state[0] ][ self.state[1] ] = 1
+
+
+        # Take Action to update Agent Position, +/- 1 based on matshow() grid co-ordinates
+        if(action==0): self.state = [agent_position[0] -1, agent_position[1]] # UP
+        if(action==1): self.state = [agent_position[0] +1, agent_position[1]] # DOWN
+        if(action==2): self.state = [agent_position[0], agent_position[1] -1] # LEFT
+        if(action==3): self.state = [agent_position[0], agent_position[1] +1] # RIGHT
+        #print('AGENT: ', self.state, ', VALUE = ', self.GW[ self.state[0] ][ self.state[1] ],', ACTION = ',action )
+
+        # Update GridWorld to Show Agent Position
+        self.GW[self.state[0]][self.state[1]] = self.agent_value
 
     def reset(self):
         # Reset GridWorld
@@ -155,9 +176,9 @@ class GridWorldEnv:
         print('REWARD: ',reward_position)
         # Reset Step Counter 
         self.steps_remaining = 20
+        self.frame_number = 0
         return np.array(self.state)
  
-
     def render_step(self):
 
         plt.matshow(self.GW, 
@@ -182,32 +203,30 @@ class GridWorldEnv:
                     vmin = 0,
                     vmax = 1
                     )
-        # Re-centre pixels such that the grid sepparates them as desired
-        # plt.gca().set_xticks([x - 0.5 for x in plt.gca().get_xticks()][1:], minor='true')
-        # plt.gca().set_yticks([y - 0.5 for y in plt.gca().get_yticks()][1:], minor='true')
-        # plt.grid(which='minor')
 
         # Save Frame
-        frame_name = 'Results/Test/FRAME_'+datetime.datetime.fromtimestamp(time.time()).strftime('%Y_%m_%d_%H:%M:')+str(time.time()) + '.jpeg'
+        frame_name = 'Results/Temp/FRAME_'+str(self.frame_number) + '.jpeg'
         plt.savefig(frame_name, bbox_inches='tight')
         plt.close()
-        #print('SAVED: ','[',self.state[0],',',self.state[1],']')
-
-
+        #print('SAVED: ','[',self.state[0],',',self.state[1],'], FRAME: ', self.frame_number)
+        self.frame_number += 1
 
     def save_episode(self):
 
         images = []
+        temp_folder = os.listdir('Results/Temp')
+        temp_folder.sort()
 
-        for filename in os.listdir('Results/Test'): 
-            next_frame = 'Results/Test/' + filename
+        for filename in temp_folder: 
+            next_frame = 'Results/Temp/' + filename
             
             # Append more than once to slow down GIF
-            for i in range(0,5):
+            for i in range(0,3):
                 images.append(imageio.imread(next_frame))
             
             # Keep the folder clean
             os.remove(next_frame)
+            #print('APPENDED: ', filename)
 
    
         
