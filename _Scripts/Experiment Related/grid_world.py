@@ -28,6 +28,7 @@ import imageio
 import time
 import datetime
 import uuid
+import natsort
 
 
 
@@ -215,7 +216,9 @@ class GridWorldEnv:
 
         images = []
         temp_folder = os.listdir('Results/Temp')
-        temp_folder.sort()
+
+        # Ensure the frames are ordered correctly (sorted naturally so 9 < 10, i.e not 1, 10, 11, ..., 2, 20, 21, ...)
+        temp_folder = natsort.natsorted(temp_folder)
 
         for filename in temp_folder: 
             next_frame = 'Results/Temp/' + filename

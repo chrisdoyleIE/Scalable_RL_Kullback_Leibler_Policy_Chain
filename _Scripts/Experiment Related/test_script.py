@@ -14,7 +14,7 @@ import numpy as np
 state = np.zeros(2)
 env = gw.GridWorldEnv()
 
-for i in range(1):
+for i in range(5):
 
     env.reset()
     done = False
