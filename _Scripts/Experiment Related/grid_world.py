@@ -188,23 +188,28 @@ class GridWorldEnv:
         # plt.grid(which='minor')
 
         # Save Frame
-        frame_name = 'Results/FRAME_'+datetime.datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S') + '.jpeg'
+        frame_name = 'Results/Test/FRAME_'+datetime.datetime.fromtimestamp(time.time()).strftime('%Y_%m_%d_%H:%M:')+str(time.time()) + '.jpeg'
         plt.savefig(frame_name, bbox_inches='tight')
+        plt.close()
+        #print('SAVED: ','[',self.state[0],',',self.state[1],']')
+
 
 
     def save_episode(self):
 
         images = []
 
-        for filename in os.listdir("Results/Test"): 
-            next_frame = "Results/Test/" + filename
-            images.append(imageio.imread(next_frame))
-
-        for filename in os.listdir("Results/Test"):
-            next_frame = "Results/Test/" + filename
+        for filename in os.listdir('Results/Test'): 
+            next_frame = 'Results/Test/' + filename
+            
+            # Append more than once to slow down GIF
+            for i in range(0,5):
+                images.append(imageio.imread(next_frame))
+            
+            # Keep the folder clean
             os.remove(next_frame)
-            print('DELETED ', filename)
+
    
         
-        #gif_name = 'Results/GIF_'+ str(datetime.datetime.fromtimestamp(time.time()).strftime('%Y_%m_%d_%H:%M')) +'.gif'
-        #imageio.mimsave( gif_name, images)
+        gif_name = 'Results/GIF_'+ str(datetime.datetime.fromtimestamp(time.time()).strftime('%Y_%m_%d_%H:%M:')) +str(time.time())+'.gif'
+        imageio.mimsave( gif_name, images)
