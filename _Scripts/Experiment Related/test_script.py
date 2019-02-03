@@ -9,13 +9,19 @@
 #---------------------------------
 
 import grid_world as gw
+import numpy as np
 
-env = gw.gridWorld((7,7),
-                        colormap = 'nipy_spectral',
-                        boundary_col = 0.95,
-                        agent_col = 0.25,
-                        reward_col = 0.75)
+state = np.zeros(2)
+env = gw.GridWorldEnv()
+env.reset()
 
-env.agent__init__()
-env.reward__init__()
-env.render()
+done = False
+while not done:
+    state, reward, done, info = env.step(env.action_space.sample())
+    env.render()
+
+
+
+
+
+#env.render()

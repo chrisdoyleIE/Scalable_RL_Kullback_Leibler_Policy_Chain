@@ -1,26 +1,30 @@
 
 #---------------------------------------------------
-#       Definitions of GridWorld for LLRL
-#       Author: Chris Doyle
+#       Gridwolrd Implementation for OpenAI GYM
+#       Author: chrisdoyleIE
 #---------------------------------------------------
 
 
+#---------------------------
+# Requiremnts
+#---------------------------
+
 import numpy as np
+import math
 import matplotlib
 matplotlib.use('TkAgg')
 import matplotlib.pyplot as plt
+import gym
+from gym import spaces, logger
+from gym.utils import seeding
 
-class gridWorld:
+class GridWorldEnv:
 
     #---------------------------
-    # Objects Attributes
+    # Information
     #---------------------------
 
     # - colormap = 'spectral'   # Theme for plt.matplot()
-    # - GW = np.ones()          # Actual GridWorld; 1.0 = grey in spectral colormap
-
-    # Hidden Attributes:
-    # - agent_position = (x,y)
     # - boundary_color = 0.95   # Red in spectral
     # - agent_color = 0.25      # XX in spectral
     # - reward_color = 0.75     # XX in spectral
@@ -29,53 +33,117 @@ class gridWorld:
     # Function Attributes
     #---------------------------
 
-    # F1: Constructor
-    def __init__(self,dims,colormap,boundary_col,agent_col,reward_col):
+
+    def __init__(self):
 
         # Initialise Attributes
-        m = dims[0]
-        n = dims[1]
-        self.GW = np.ones(dims)
-        self.colormap = colormap
-        self.boundary_color = float(boundary_col)
-        self.agent_color = float(agent_col)
-        self.reward_color = float(reward_col)
+        self.dims = np.array([7,7])
+        self.GW = np.ones(self.dims) # default value of grid is 1
+        self.colormap = 'nipy_spectral'
+        self.boundary_value = 0.95
+        self.agent_value = 0.25
+        self.reward_value = 0.75
 
-        # Initialise Boundary of GridWorld
-        for i in range(m): 
-            for j in range(n): 
-                if i == 0: 
-                    self.GW[i][j] = self.boundary_color
-                elif i == m-1: 
-                    self.GW[i][j] = self.boundary_color
-                elif j == 0: 
-                    self.GW[i][j] = self.boundary_color
-                elif j == n-1: 
-                    self.GW[i][j] = self.boundary_color
-    
-    # F2: Initialise/Reset agent to random location in GridWorld
-    def agent__init__(self):
-        print('FUNCTION CALL: agent__init__(self)')
-        # Ensure random position is inside the boundary
-        self.agent_position = (np.random.randint(1,self.GW.shape[0]-1) , # x co-ordinate
-                               np.random.randint(1,self.GW.shape[1]-1) ) # y co-ordinate
+        # Initialise Action Space {Up, Down, Left, Right}
+        self.action_space = gym.spaces.Discrete(4)
+
+        # Initialise Observation Space {agent_x, agent_y}
+        low = np.array([0,0])
+        high = np.array(self.dims)
+        self.observation_space = spaces.Box(low,high,dtype=np.float32)
+
+        # See lines 81 - 85, cartpole.py from OpenAI
+        self.seed()
+        self.viewer = None
+        self.state = None
+        self.steps_remaining = 20
+
+
+    def seed(self, seed=None):
+        self.np_random, seed = seeding.np_random(seed)
+        return [seed]
+
+
+    def step(self, action):
+        assert self.action_space.contains(action), "%r (%s) invalid"%(action, type(action))
+        agent_position = self.state
+        reward = 0
         
-        self.GW[self.agent_position[0]][self.agent_position[1]] = self.agent_color
- 
-    # F3: Initialise/Reset reward to random location in GridWorld
-    def reward__init__(self):
-        print('FUNCTION CALL: reward__init__(self)')
+        # Set Tile Agent has Left to Default Value
+        self.GW[ self.state[0] ][ self.state[1] ] = 1
 
-        self.reward_position = self.agent_position
+        # Take Action to update Agent Position
+        if(action==0): self.state = [agent_position[0], agent_position[1]+1] # UP
+        if(action==1): self.state = [agent_position[0], agent_position[1]-1] # DOWN
+        if(action==2): self.state = [agent_position[0]-1, agent_position[1]] # LEFT
+        if(action==3): self.state = [agent_position[0]+1, agent_position[1]] # RIGHT
+        print('AGENT: ', self.state)
+
+        # Check if Done
+        done = bool( self.GW[self.state[0]][self.state[1]] == self.boundary_value)
+
+        self.steps_remaining -= 1
+
+        if not done:
+            # Reached the Goal
+            if (self.GW[ self.state[0] ][ self.state[1] ] == self.reward_value):
+                reward = 5
+                done = True
+            # Ran out of Steps
+            elif self.steps_remaining == 0:
+                done = True
+                reward = -10
+            # Otherwise just continue onwards
+            else:
+                reward = -1
+        # Agent has gone over the boundary
+        else:
+            reward = -10
+
+        # Update GridWorld to Show Agent Position
+        self.GW[self.state[0]][self.state[1]] = self.agent_value
+
+        return np.array(self.state), reward, done, {}
+
+
+    def reset(self):
+        # Reset GridWorld
+        self.GW = np.ones(self.dims) 
+        
+        # Initialise Boundary of GridWorld
+        for i in range( self.dims[0] ): 
+            for j in range( self.dims[1] ): 
+                if i == 0: 
+                    self.GW[i][j] = self.boundary_value
+                elif i == self.dims[0]-1: 
+                    self.GW[i][j] = self.boundary_value
+                elif j == 0: 
+                    self.GW[i][j] = self.boundary_value
+                elif j == self.dims[1]-1: 
+                    self.GW[i][j] = self.boundary_value
+
+        # Reset Agent to Random Location
+        self.state = np.array( [math.trunc( np.random.uniform(low = 1, high = self.dims[0] -1) ),
+                                math.trunc( np.random.uniform(low = 1, high = self.dims[1] -1) ) ]
+                                )
+        self.GW[ self.state[0] ][ self.state[1] ] = self.agent_value
+        print('AGENT: ',self.state)
+
+        # Reset Reward Position
+        reward_position = self.state
 
         # Ensure that reward position is different to starting position
-        while self.reward_position == self.agent_position:
-            self.reward_position = (np.random.randint(1,self.GW.shape[0]-1) , # x co-ordinate
-                                    np.random.randint(1,self.GW.shape[1]-1) ) # y co-ordinate
-        
-        self.GW[self.reward_position[0]][self.reward_position[1]] = self.reward_color
-    
-    # F4: Print the GridWorld
+        while np.array_equal( reward_position, self.state ):
+                reward_position = np.array( [math.trunc( np.random.uniform(low = 1, high = self.dims[0] -1) ),
+                                             math.trunc( np.random.uniform(low = 1, high = self.dims[1] -1) ) ]
+                                            )
+        self.GW[reward_position[0]][reward_position[1]] = self.reward_value
+        print('REWARD: ',reward_position)
+        # Reset Step Counter 
+        self.steps_remaining = 20
+        return np.array(self.state)
+ 
+
     def render(self):
         print('FUNCTION CALL: render(self)')
         plt.matshow(self.GW, 
@@ -88,9 +156,14 @@ class gridWorld:
         # plt.gca().set_xticks([x - 0.5 for x in plt.gca().get_xticks()][1:], minor='true')
         # plt.gca().set_yticks([y - 0.5 for y in plt.gca().get_yticks()][1:], minor='true')
         # plt.grid(which='minor')
+
+        # Save Plot
+        #plt.savefig('Results/Test/test_2.jpeg', bbox_inches='tight')
         plt.show()
 
-        
+    # F5: 
+
+
 #################
 # TEST MAIN
 #################
