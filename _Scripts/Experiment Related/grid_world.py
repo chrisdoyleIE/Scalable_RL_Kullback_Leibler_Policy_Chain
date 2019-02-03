@@ -11,12 +11,26 @@
 
 import numpy as np
 import math
+
+# For Plotting Purposes
 import matplotlib
 matplotlib.use('TkAgg')
 import matplotlib.pyplot as plt
+
+# For Creating Action and Observation Spaces etc
 import gym
 from gym import spaces, logger
 from gym.utils import seeding
+
+# For Saving Episode GIF
+import os
+import imageio
+import time
+import datetime
+
+
+#print('IMPORT: grid_world.py')
+
 
 class GridWorldEnv:
 
@@ -144,8 +158,8 @@ class GridWorldEnv:
         return np.array(self.state)
  
 
-    def render(self):
-        print('FUNCTION CALL: render(self)')
+    def render_step(self):
+
         plt.matshow(self.GW, 
                     cmap = self.colormap,
                     interpolation = 'none',
@@ -157,15 +171,40 @@ class GridWorldEnv:
         # plt.gca().set_yticks([y - 0.5 for y in plt.gca().get_yticks()][1:], minor='true')
         # plt.grid(which='minor')
 
-        # Save Plot
-        #plt.savefig('Results/Test/test_2.jpeg', bbox_inches='tight')
+
+        # Show Frame
         plt.show()
 
-    # F5: 
+    def save_step(self):
+        plt.matshow(self.GW, 
+                    cmap = self.colormap,
+                    interpolation = 'none',
+                    vmin = 0,
+                    vmax = 1
+                    )
+        # Re-centre pixels such that the grid sepparates them as desired
+        # plt.gca().set_xticks([x - 0.5 for x in plt.gca().get_xticks()][1:], minor='true')
+        # plt.gca().set_yticks([y - 0.5 for y in plt.gca().get_yticks()][1:], minor='true')
+        # plt.grid(which='minor')
+
+        # Save Frame
+        frame_name = 'Results/FRAME_'+datetime.datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S') + '.jpeg'
+        plt.savefig(frame_name, bbox_inches='tight')
 
 
-#################
-# TEST MAIN
-#################
+    def save_episode(self):
 
-print('IMPORT: grid_world.py')
+        images = []
+
+        for filename in os.listdir("Results/Test"): 
+            next_frame = "Results/Test/" + filename
+            images.append(imageio.imread(next_frame))
+
+        for filename in os.listdir("Results/Test"):
+            next_frame = "Results/Test/" + filename
+            os.remove(next_frame)
+            print('DELETED ', filename)
+   
+        
+        #gif_name = 'Results/GIF_'+ str(datetime.datetime.fromtimestamp(time.time()).strftime('%Y_%m_%d_%H:%M')) +'.gif'
+        #imageio.mimsave( gif_name, images)
