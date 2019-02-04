@@ -14,13 +14,14 @@ import numpy as np
 state = np.zeros(2)
 env = gw.GridWorldEnv()
 
-for i in range(5):
+# for i in range(5):
 
-    env.reset()
-    done = False
-    while not done:
-        state, reward, done, info = env.step(env.action_space.sample())
-        env.save_step()
+#     env.reset()
+#     done = False
+#     while not done:
+#         state, reward, done, info = env.step(env.action_space.sample())
+#         #env.save_step()
     
-    env.save_episode()
+#     #env.save_episode()
 
+from RL_brain import PolicyGradient

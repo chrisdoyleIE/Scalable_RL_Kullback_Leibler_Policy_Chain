@@ -104,21 +104,21 @@ class GridWorldEnv:
         if not done:
             # Reached the Goal
             if (self.GW[ self.state[0] ][ self.state[1] ] == self.reward_value):
-                reward = 5
+                reward = 10
                 done = True
-                print('REWARD')
+                #print('REWARD')
             # Ran out of Steps
             elif self.steps_remaining == 0:
                 done = True
                 reward = -10
-                print('STEPS')
+                #print('STEPS')
             # Otherwise just continue onwards
             else:
                 reward = -1
         # Agent has gone over the boundary
         else:
             reward = -10
-            print('BOUNDARY')
+            #print('BOUNDARY')
 
         # Update GridWorld to Show Agent Position
         self.GW[self.state[0]][self.state[1]] = self.agent_value
