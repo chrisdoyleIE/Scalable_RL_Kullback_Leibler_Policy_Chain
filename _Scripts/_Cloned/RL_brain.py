@@ -88,10 +88,12 @@ class PolicyGradient:
         action = np.random.choice(range(prob_weights.shape[1]), p=prob_weights.ravel())  # select action w.r.t the actions prob
         return action
 
-    def store_transition(self, s, a, r):
+    def store_transition(self, s, a, r,flag):
         self.ep_obs.append(s)
         self.ep_as.append(a)
         self.ep_rs.append(r)
+
+        if flag: print('REWARDS: ', np.shape(self.ep_rs)[0])
 
     def learn(self):
         # discount and normalize episode reward

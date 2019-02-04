@@ -12,6 +12,7 @@ gym: 0.8.0
 """
 
 import numpy as np
+import math
 import tensorflow as tf
 
 # reproducible
@@ -83,19 +84,32 @@ class PolicyGradient:
         with tf.name_scope('train'):
             self.train_op = tf.train.AdamOptimizer(self.lr).minimize(loss)
 
-    def choose_action(self, observation):
+    def choose_action(self, observation, flag):
         prob_weights = self.sess.run(self.all_act_prob, feed_dict={self.tf_obs: observation[np.newaxis, :]})
+
+        # EXPERIMENTAL OUTPUT
+        #if flag: print('prob_weights',prob_weights)
+
         action = np.random.choice(range(prob_weights.shape[1]), p=prob_weights.ravel())  # select action w.r.t the actions prob
+
+        #Try to Experiment with Uniform
+        #action = math.trunc(np.random.uniform(0,4))
         return action
 
-    def store_transition(self, s, a, r):
+    def store_transition(self, s, a, r, flag):
         self.ep_obs.append(s)
         self.ep_as.append(a)
         self.ep_rs.append(r)
 
+        # EXPERIMENTAL OUTPUT
+        if flag: print('REWARDS: ',self.ep_rs)
+
     def learn(self):
         # discount and normalize episode reward
         discounted_ep_rs_norm = self._discount_and_norm_rewards()
+        
+        # EXPERIMENTAL OUTPUT
+        #print('discounted_ep_rs_norm',discounted_ep_rs_norm)
 
         # train on episode
         self.sess.run(self.train_op, feed_dict={
@@ -117,9 +131,15 @@ class PolicyGradient:
             discounted_ep_rs[t] = running_add
 
         # normalize episode rewards
-        #print('TEST: ',type(discounted_ep_rs), type(np.mean(discounted_ep_rs)))
         discounted_ep_rs -= np.mean(discounted_ep_rs)
-        discounted_ep_rs /= np.std(discounted_ep_rs)
+
+        # EXPERIMENTAL OUTPUT
+        #print('np.std(discounted_ep_rs)', np.std(discounted_ep_rs))
+
+        if (np.std(discounted_ep_rs) != 0):
+            discounted_ep_rs /= np.std(discounted_ep_rs)
+
+
         return discounted_ep_rs
 
 

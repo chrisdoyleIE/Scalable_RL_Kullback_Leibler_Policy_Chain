@@ -60,6 +60,7 @@ class GridWorldEnv:
         self.boundary_value = 0.95
         self.agent_value = 0.25
         self.reward_value = 0.75
+        self.mastered = False
 
         # Initialise Action Space {Up, Down, Left, Right}
         self.action_space = gym.spaces.Discrete(4)
@@ -73,7 +74,7 @@ class GridWorldEnv:
         self.seed()
         self.viewer = None
         self.state = None
-        self.steps_remaining = 20
+        self.steps_remaining = 30
         self.frame_number = 0
 
     def seed(self, seed=None):
@@ -101,28 +102,32 @@ class GridWorldEnv:
 
         self.steps_remaining -= 1
 
-        if not done:
+        if done:
+            # Agent has gone over the boundary
+            reward = -2000
+
+            # Update GridWorld to Show Agent Position
+            self.GW[self.state[0]][self.state[1]] = self.agent_value
+            return np.array(self.state), reward, done, {}
+
+        else:
             # Reached the Goal
             if (self.GW[ self.state[0] ][ self.state[1] ] == self.reward_value):
-                reward = 10
+                reward = 1000000
                 done = True
                 #print('REWARD')
             # Ran out of Steps
             elif self.steps_remaining == 0:
                 done = True
-                reward = -10
+                reward = -1000
                 #print('STEPS')
             # Otherwise just continue onwards
             else:
                 reward = -1
-        # Agent has gone over the boundary
-        else:
-            reward = -10
-            #print('BOUNDARY')
+                #reward = 0
 
         # Update GridWorld to Show Agent Position
         self.GW[self.state[0]][self.state[1]] = self.agent_value
-
         return np.array(self.state), reward, done, {}
 
     def debug_step(self,action):
@@ -190,7 +195,6 @@ class GridWorldEnv:
         self.GW[reward_position[0]][reward_position[1]] = self.reward_value
         #print('REWARD: ',reward_position)
 
-
     def render_step(self):
 
         plt.matshow(self.GW, 
@@ -223,7 +227,7 @@ class GridWorldEnv:
         #print('SAVED: ','[',self.state[0],',',self.state[1],'], FRAME: ', self.frame_number)
         self.frame_number += 1
 
-    def save_episode(self):
+    def save_episode(self, episode_number):
 
         images = []
         temp_folder = os.listdir('Results/Temp')
@@ -244,5 +248,8 @@ class GridWorldEnv:
 
    
         
-        gif_name = 'Results/GIF_'+ str(datetime.datetime.fromtimestamp(time.time()).strftime('%Y_%m_%d_%H:%M:')) +str(time.time())+'.gif'
+        gif_name = 'Results/'+ str(datetime.datetime.fromtimestamp(time.time()).strftime('%Y_%m_%d_%H:%M'))+'_E'+str(episode_number)+'.gif'
         imageio.mimsave( gif_name, images)
+
+    def mastered_(self):
+        self.mastered = not self.mastered

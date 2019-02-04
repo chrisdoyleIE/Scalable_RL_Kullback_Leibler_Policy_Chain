@@ -36,7 +36,7 @@ matplotlib.use("TkAgg")
 import matplotlib.pyplot as plt
 
 DISPLAY_REWARD_THRESHOLD = 0  # renders environment if total episode reward is greater then this threshold
-RENDER = False  # rendering wastes time
+FLAG = False
 
 env = gw.GridWorldEnv()
 env.seed(1)     # reproducible, general Policy gradient has high variance
@@ -54,32 +54,40 @@ RL = PolicyGradient(
     # output_graph=True,
 )
 
-for i_episode in range(250):
+for i_episode in range(10000):
 
     observation = env.reset()
 
-    while True:
-        if RENDER: env.save_step()
+    # Set flag for display option
+    flag = False
+    if (i_episode % 1000 == 0 and i_episode > 0): flag = True
+    #flag = True
 
-        action = RL.choose_action(observation)
+
+    while True:
+        action = RL.choose_action(observation,flag)
 
         observation_, reward, done, info = env.step(action)
+        RL.store_transition(observation, action, reward, (flag and done))
 
-        RL.store_transition(observation, action, reward)
+        if flag: env.save_step()
+        #env.save_step()
 
         if done:
-            if RENDER: env.save_episode
-
             ep_rs_sum = sum(RL.ep_rs)
 
             if 'running_reward' not in globals():
                 running_reward = ep_rs_sum
             else:
-                running_reward = running_reward * 0.99 + ep_rs_sum * 0.01
-            if running_reward > DISPLAY_REWARD_THRESHOLD: RENDER = True     # rendering
-            print("episode:", i_episode, "  reward:", int(running_reward))
+                running_reward = running_reward * 0.95 + ep_rs_sum * 0.01
+            if flag: 
+                print("episode:", i_episode, "  reward:", int(running_reward),'\n')
 
             vt = RL.learn()
             break
 
         observation = observation_
+
+
+    if (flag): env.save_episode(i_episode)
+    #env.save_episode(i_episode)

@@ -1,16 +1,14 @@
-"""
-Policy Gradient, Reinforcement Learning.
 
-The cart pole example
+#---------------------------------------------------
+#       Test Created Classes for gridWorld & co.
+#       Author: Chris Doyle
+#---------------------------------------------------
 
-View more on my tutorial page: https://morvanzhou.github.io/tutorials/
+#---------------------------------
+# Importing the gridWorld class
+#---------------------------------
 
-Using:
-Tensorflow: 1.0
-gym: 0.8.0
-"""
-
-import gym
+import grid_world as gw
 from RL_brain import PolicyGradient
 
 # Bug Patch from https://github.com/MTG/sms-tools/issues/36
@@ -20,13 +18,11 @@ matplotlib.use("TkAgg")
 
 import matplotlib.pyplot as plt
 
-DISPLAY_REWARD_THRESHOLD = 400  # renders environment if total episode reward is greater then this threshold
+DISPLAY_REWARD_THRESHOLD = 0  # renders environment if total episode reward is greater then this threshold
 RENDER = False  # rendering wastes time
-Flag = False 
 
-env = gym.make('CartPole-v0')
+env = gw.GridWorldEnv()
 env.seed(1)     # reproducible, general Policy gradient has high variance
-env = env.unwrapped
 
 print(env.action_space)
 print(env.observation_space)
@@ -41,22 +37,23 @@ RL = PolicyGradient(
     # output_graph=True,
 )
 
-for i_episode in range(80):
+for i_episode in range(501):
 
     observation = env.reset()
-    flag = False
-    if(i_episode >0 and i_episode%10==0): flag = True
 
     while True:
-        if RENDER: env.render()
+        if RENDER: env.save_step()
 
         action = RL.choose_action(observation)
 
         observation_, reward, done, info = env.step(action)
 
-        RL.store_transition(observation, action, reward, (flag and done))
+        RL.store_transition(observation, action, reward)
+        if ((i_episode%100) == 0 and i_episode > 0): env.save_step()
 
         if done:
+            if RENDER: env.save_episode
+
             ep_rs_sum = sum(RL.ep_rs)
 
             if 'running_reward' not in globals():
@@ -67,12 +64,8 @@ for i_episode in range(80):
             print("episode:", i_episode, "  reward:", int(running_reward))
 
             vt = RL.learn()
-
-            if i_episode == 0:
-                plt.plot(vt)    # plot the episode vt
-                plt.xlabel('episode steps')
-                plt.ylabel('normalized state-action value')
-                plt.show()
             break
 
         observation = observation_
+
+    if (i_episode%100 == 0 and i_episode > 0): env.save_episode()
