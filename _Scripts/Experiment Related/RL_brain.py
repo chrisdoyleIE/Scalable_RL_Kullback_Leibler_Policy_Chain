@@ -110,12 +110,14 @@ class PolicyGradient:
     def _discount_and_norm_rewards(self):
         # discount episode rewards
         discounted_ep_rs = np.zeros_like(self.ep_rs)
+        discounted_ep_rs = discounted_ep_rs.astype(float)
         running_add = 0
         for t in reversed(range(0, len(self.ep_rs))):
             running_add = running_add * self.gamma + self.ep_rs[t]
             discounted_ep_rs[t] = running_add
 
         # normalize episode rewards
+        #print('TEST: ',type(discounted_ep_rs), type(np.mean(discounted_ep_rs)))
         discounted_ep_rs -= np.mean(discounted_ep_rs)
         discounted_ep_rs /= np.std(discounted_ep_rs)
         return discounted_ep_rs

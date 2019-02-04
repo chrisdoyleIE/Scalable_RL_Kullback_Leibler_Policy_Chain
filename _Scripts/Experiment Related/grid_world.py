@@ -163,23 +163,34 @@ class GridWorldEnv:
                                 math.trunc( np.random.uniform(low = 1, high = self.dims[1] -1) ) ]
                                 )
         self.GW[ self.state[0] ][ self.state[1] ] = self.agent_value
-        print('AGENT: ',self.state)
+        #print('AGENT: ',self.state)
 
-        # Reset Reward Position
-        reward_position = self.state
+        # Determine Reward Position
+        self.set_reward(fixed = True, reward_pos = np.array([3,4]))
 
-        # Ensure that reward position is different to starting position
-        while np.array_equal( reward_position, self.state ):
-                reward_position = np.array( [math.trunc( np.random.uniform(low = 1, high = self.dims[0] -1) ),
-                                             math.trunc( np.random.uniform(low = 1, high = self.dims[1] -1) ) ]
-                                            )
-        self.GW[reward_position[0]][reward_position[1]] = self.reward_value
-        print('REWARD: ',reward_position)
         # Reset Step Counter 
         self.steps_remaining = 20
         self.frame_number = 0
         return np.array(self.state)
  
+    def set_reward(self, fixed, reward_pos = None):
+
+        if not fixed:
+            # Reset Reward Position
+            reward_position = self.state
+
+            # Ensure that reward position is different to starting position
+            while np.array_equal( reward_position, self.state ):
+                    reward_position = np.array( [math.trunc( np.random.uniform(low = 1, high = self.dims[0] -1) ),
+                                                math.trunc( np.random.uniform(low = 1, high = self.dims[1] -1) ) ]
+                                                )
+        else:
+            reward_position = reward_pos
+
+        self.GW[reward_position[0]][reward_position[1]] = self.reward_value
+        #print('REWARD: ',reward_position)
+
+
     def render_step(self):
 
         plt.matshow(self.GW, 
