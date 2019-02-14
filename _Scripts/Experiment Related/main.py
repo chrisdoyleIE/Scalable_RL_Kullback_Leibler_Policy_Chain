@@ -22,11 +22,11 @@ import matplotlib.pyplot as plt
 #  Globals
 #---------------------------------------------------------------------------------------------------
 
-DISPLAY_REWARD_THRESHOLD = 0  # renders environment if total episode reward is greater then this threshold
-FLAG = False
-CREATE_DIR = True
+RENDER = False          # Saves the episode as a .gif into the Results/Logged Runs/ Run_X
+DISPLAY_REWARD = False  # Outputs reward and episode to the console
+LOG_RUN = True          # Whether of not you want to create a log file
 
-env = gw.GridWorldEnv()
+env = gw.GridWorldEnv(100)
 env.seed(1)     # reproducible, general Policy gradient has high variance
 
 print(env.action_space)
@@ -43,36 +43,35 @@ LLRL = PolicyGradient(
     # output_graph=True,
 )
 
-for i_episode in range(10000):
-
-     
+for i_episode in range( env.num_episodes ):
 
     observation = env.reset()
 
-    # Set flag for display option
-    flag = False
-    if (i_episode % 100 == 0 and i_episode > 0): flag = True
+    # Set flags for display & render options
+    RENDER, DISPLAY_REWARD = False, False
+    if (i_episode % (env.num_episodes / 1) == 0 and i_episode > 0): RENDER = True          
+    if (i_episode % (env.num_episodes / 10) == 0 and i_episode > 0): DISPLAY_REWARD = True
 
 
     while True:
-        action = LLRL.choose_action(observation,flag)
+        action = LLRL.choose_action(observation,RENDER)
 
         observation_, reward, done, info = env.step(action)
-        LLRL.store_transition(observation, action, reward, (flag and done))
+        LLRL.store_transition(observation, action, reward, (RENDER and done))
 
-        if flag: env.save_step()
+        if RENDER: env.save_step()
 
         if done:
             ep_rs_sum = sum(LLRL.ep_rs)
 
-            if 'running_reward' not in globals():
-                running_reward = ep_rs_sum
+            if i_episode == 0 :       
+                running_reward = ep_rs_sum           
             else:
                 running_reward_ = running_reward
                 running_reward = running_reward * 0.95 + ep_rs_sum * 0.05     
-                env.log(i_episode,running_reward_, running_reward, ep_rs_sum)
+                if LOG_RUN: env.log(i_episode,running_reward_, running_reward, ep_rs_sum)
             
-            if flag: print("episode:", i_episode, "  reward:", int(running_reward),'\n')
+            if DISPLAY_REWARD: print("episode:", i_episode, "  reward:", int(running_reward))
 
             vt = LLRL.learn()
             break
@@ -80,9 +79,7 @@ for i_episode in range(10000):
         observation = observation_
 
 
-    if (flag): 
-        env.save_episode(i_episode, CREATE_DIR)
-        CREATE_DIR = False      # One directory per running of script
+    if (RENDER): env.save_episode(i_episode)
 
 
 # Agent can now be considered trained

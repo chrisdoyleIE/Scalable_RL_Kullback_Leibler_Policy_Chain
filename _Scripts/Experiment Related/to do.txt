@@ -1,0 +1,2 @@
+
+Fix env.log() to display something useful

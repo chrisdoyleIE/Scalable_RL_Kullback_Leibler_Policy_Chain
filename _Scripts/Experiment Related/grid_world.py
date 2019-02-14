@@ -51,18 +51,17 @@ class GridWorldEnv:
     #---------------------------
 
 
-    def __init__(self):
+    def __init__(self, num_episodes):
 
         # Initialise Attributes
+        self.num_episodes = num_episodes
         self.dims = np.array([12,12])
         self.GW = np.ones(self.dims) # default value of grid is 1
         self.colormap = 'nipy_spectral'
         self.boundary_value = 0.95
         self.agent_value = 0.25
         self.reward_value = 0.75
-        self.dir_for_run = ''
-        self.log_file = ''
-        self.reward_flag = 'N'
+        self.goal_flag = 'N'
 
         # Initialise Action Space {Up, Down, Left, Right}
         self.action_space = gym.spaces.Discrete(4)
@@ -72,12 +71,30 @@ class GridWorldEnv:
         high = np.array(self.dims)
         self.observation_space = spaces.Box(low,high,dtype=np.float32)
 
+         # Initialise Specific Reward Values
+        self.goal_reward = 1000000
+        self.boundary_reward = -2000
+        self.too_many_steps_reward = -1000
+        self.step_reward = -1
+
+        # Create Directory for the run
+        self.dir_for_run = 'Results/Logged Runs/'+ str(datetime.datetime.fromtimestamp(time.time()).strftime('%Y_%m_%d_%H:%M:%S'))
+        os.mkdir(self.dir_for_run)
+        self.log_dir = self.dir_for_run + '/log.txt'
+        self.log_file = open(self.log_dir, "a")
+        self.log_file.write( 'Goal Reward: %d\nBoundary Reward: %d\nToo Many Steps: %d\nStep Reward: %d\n\n ' % (self.goal_reward,
+                                                                                                                self.boundary_reward,
+                                                                                                                self.too_many_steps_reward,
+                                                                                                                self.step_reward))
+
+
         # See lines 81 - 85, cartpole.py from OpenAI
         self.seed()
         self.viewer = None
         self.state = None
         self.steps_remaining = 30
         self.frame_number = 0
+
 
     def seed(self, seed=None):
         self.np_random, seed = seeding.np_random(seed)
@@ -106,7 +123,7 @@ class GridWorldEnv:
 
         if done:
             # Agent has gone over the boundary
-            reward = -2000
+            reward = self.boundary_reward
 
             # Update GridWorld to Show Agent Position
             self.GW[self.state[0]][self.state[1]] = self.agent_value
@@ -115,18 +132,18 @@ class GridWorldEnv:
         else:
             # Reached the Goal
             if (self.GW[ self.state[0] ][ self.state[1] ] == self.reward_value):
-                reward = 1000000
+                reward = self.goal_reward
                 done = True
-                self.reward_flag = 'Y'
+                self.goal_flag = 'Y'
                 #print('REWARD')
             # Ran out of Steps
             elif self.steps_remaining == 0:
                 done = True
-                reward = -1000
+                reward = self.too_many_steps_reward
                 #print('STEPS')
             # Otherwise just continue onwards
             else:
-                reward = -1
+                reward = self.step_reward
                 #reward = 0
 
         # Update GridWorld to Show Agent Position
@@ -151,6 +168,10 @@ class GridWorldEnv:
         self.GW[self.state[0]][self.state[1]] = self.agent_value
 
     def reset(self):
+
+        # Open log file to write to 
+        self.log_file = open(self.log_dir,"a")
+
         # Reset GridWorld
         self.GW = np.ones(self.dims) 
         
@@ -179,10 +200,8 @@ class GridWorldEnv:
         # Reset Step Counter 
         self.steps_remaining = 20
         self.frame_number = 0
-        self.reward_flag = 'N'
-        self.log_file = open("log.txt","a")
+        self.goal_flag = 'N'
    
-
         return np.array(self.state)
  
     def set_reward(self, fixed, reward_pos = None):
@@ -235,19 +254,7 @@ class GridWorldEnv:
         self.frame_number += 1
         self.dir_created = False # Reset this boolean each to ensure directory for each run created correctly
 
-    def save_episode(self, episode_number, create_dir):
-
-        # Create target Directory if it doesn't exist
-        if create_dir:
-            self.dir_for_run = 'Results/Logged Runs/'+ str(datetime.datetime.fromtimestamp(time.time()).strftime('%Y_%m_%d_%H:%M:%S'))
-            os.mkdir(self.dir_for_run)
-
-            # Move the log.txt to the dir fo the run
-            self.log_file.close()
-            log_file = self.dir_for_run + '/log.txt' 
-            os.rename("log.txt", log_file)
-            #print("Directory " , self.dir_for_run ,  " Created ")
-
+    def save_episode(self, episode_number):
 
         # Ensure the frames are ordered correctly (sorted naturally so 9 < 10, i.e not 1, 10, 11, ..., 2, 20, 21, ...)
         temp_folder = os.listdir('Results/Temp')
@@ -268,5 +275,9 @@ class GridWorldEnv:
         imageio.mimsave( gif_name, images)
 
     def log(self, i_episode, r_, r, ep_s):
-        self.log_file.write("Episode: %d: %d = (%d * 0.95) + (%d * 0.01)\n" % (i_episode,r, r_, ep_s))
+        #self.log_file.write("Episode: %d: %d = (%d * 0.95) + (%d * 0.01)\n" % (i_episode,r, r_, ep_s))
+        #self.log_file.write("%d   %d    %d    %d * 0.01)\n" % (i_episode,r, ep_s))
+        self.log_file.close()
         #print("%d = (%d * 0.95) + (%d * 0.01)" % (r_, r, ep_s))
+
+

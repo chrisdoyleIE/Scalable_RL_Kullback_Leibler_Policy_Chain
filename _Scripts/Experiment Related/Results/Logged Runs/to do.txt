@@ -1,5 +1,0 @@
-Fix log file, why does it stop at 100? something to do with flag set every 100.
-
-Figure out why agent forgets
-
-Do KL stuff
