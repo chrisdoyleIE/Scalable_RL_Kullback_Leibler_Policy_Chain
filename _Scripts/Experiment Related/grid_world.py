@@ -60,7 +60,9 @@ class GridWorldEnv:
         self.boundary_value = 0.95
         self.agent_value = 0.25
         self.reward_value = 0.75
-        self.mastered = False
+        self.dir_for_run = ''
+        self.log_file = ''
+        self.reward_flag = 'N'
 
         # Initialise Action Space {Up, Down, Left, Right}
         self.action_space = gym.spaces.Discrete(4)
@@ -115,6 +117,7 @@ class GridWorldEnv:
             if (self.GW[ self.state[0] ][ self.state[1] ] == self.reward_value):
                 reward = 1000000
                 done = True
+                self.reward_flag = 'Y'
                 #print('REWARD')
             # Ran out of Steps
             elif self.steps_remaining == 0:
@@ -176,6 +179,10 @@ class GridWorldEnv:
         # Reset Step Counter 
         self.steps_remaining = 20
         self.frame_number = 0
+        self.reward_flag = 'N'
+        self.log_file = open("log.txt","a")
+   
+
         return np.array(self.state)
  
     def set_reward(self, fixed, reward_pos = None):
@@ -226,30 +233,40 @@ class GridWorldEnv:
         plt.close()
         #print('SAVED: ','[',self.state[0],',',self.state[1],'], FRAME: ', self.frame_number)
         self.frame_number += 1
+        self.dir_created = False # Reset this boolean each to ensure directory for each run created correctly
 
-    def save_episode(self, episode_number):
+    def save_episode(self, episode_number, create_dir):
 
-        images = []
-        temp_folder = os.listdir('Results/Temp')
+        # Create target Directory if it doesn't exist
+        if create_dir:
+            self.dir_for_run = 'Results/Logged Runs/'+ str(datetime.datetime.fromtimestamp(time.time()).strftime('%Y_%m_%d_%H:%M:%S'))
+            os.mkdir(self.dir_for_run)
+
+            # Move the log.txt to the dir fo the run
+            self.log_file.close()
+            log_file = self.dir_for_run + '/log.txt' 
+            os.rename("log.txt", log_file)
+            #print("Directory " , self.dir_for_run ,  " Created ")
+
 
         # Ensure the frames are ordered correctly (sorted naturally so 9 < 10, i.e not 1, 10, 11, ..., 2, 20, 21, ...)
+        temp_folder = os.listdir('Results/Temp')
         temp_folder = natsort.natsorted(temp_folder)
 
+        images = []
         for filename in temp_folder: 
             next_frame = 'Results/Temp/' + filename
             
             # Append more than once to slow down GIF
-            for i in range(0,3):
-                images.append(imageio.imread(next_frame))
+            for i in range(0,3): images.append(imageio.imread(next_frame))
             
             # Keep the folder clean
             os.remove(next_frame)
             #print('APPENDED: ', filename)
-
-   
         
-        gif_name = 'Results/'+ str(datetime.datetime.fromtimestamp(time.time()).strftime('%Y_%m_%d_%H:%M'))+'_E'+str(episode_number)+'.gif'
+        gif_name = self.dir_for_run + '/' + 'Episode_'+str(episode_number)+'_'+self.reward_flag+'.gif'
         imageio.mimsave( gif_name, images)
 
-    def mastered_(self):
-        self.mastered = not self.mastered
+    def log(self, i_episode, r_, r, ep_s):
+        self.log_file.write("Episode: %d: %d = (%d * 0.95) + (%d * 0.01)\n" % (i_episode,r, r_, ep_s))
+        #print("%d = (%d * 0.95) + (%d * 0.01)" % (r_, r, ep_s))

@@ -16,13 +16,13 @@
 %   It will be used for the title page and for the embedded PDF information
 %----------------------------------------------------------------------------------------
 
-\newcommand{\thesistitle}{Dissertation Title} % Your thesis title, this is used in the title and abstract
-\newcommand{\degree}{MAI (Computer Engineering)} % Your degree name, this is used in the title page and abstract
+\newcommand{\thesistitle}{Kullback-Leibler Policy Chaining for Scalable Lifelong Reinforcement Learning} % Your thesis title, this is used in the title and abstract
+\newcommand{\degree}{B.Eng (Computer and Electronic Engineering)} % Your degree name, this is used in the title page and abstract
 \newcommand{\typeofthesis}{Final Year Project} % dissertation, Final Year Project, report, etc.
-\newcommand{\authorname}{John Smith} % Your name, this is used in the title page and PDF stuff
+\newcommand{\authorname}{Christopher Doyle} % Your name, this is used in the title page and PDF stuff
 %% Comment out the next line if you don't want your ID to appear
-\newcommand{\authorid}{14345678} % Your ID
-\newcommand{\keywords}{this, that, more} % Keywords for your thesis
+\newcommand{\authorid}{15323093} % Your ID
+\newcommand{\keywords}{reinforcement learning, lifelong learning, transfer learning, multitask learning} % Keywords for your thesis
 \newcommand{\school}{\href{http://www.scss.tcd.ie}{School of Computer Science and Statistics}} % Your school's name and URL, this is used in the title page
 
 %% Comment out the next line if you don't want a department to appear
@@ -80,7 +80,7 @@
 
 %% It is not a requirement of the university that the font should be sans-serif, but
 %% the Mechanical engineers require it. Comment out the following line to disable it
-%\renewcommand{\familydefault}{\sfdefault} %use the sans-serif font as default
+%\renewcommand{\familydefault}{\sfdefault} %use the sans-serif {\normalsize font} as default
 
 %% If you're not using sans-serif, consider using Palatino instead of the LaTeX standard
 %\usepackage{mathpazo} % Use the Palatino font by default if you prefer it to Computer Modern
@@ -115,16 +115,10 @@ Signed:~\rule{5cm}{0.3pt}\hfill Date:~\rule{5cm}{0.3pt}
 
 \chapter*{Abstract}
 
-There isn’t a human on this earth who can triumph over Deepmind’s AlphaGo in the game of Go, however this does not quite make AlphaGo super-intelligent in that a child may beat it at draughts. 
-
-University of Oxford philosopher Nick Bostrom defines super-intelligence as "any intellect that greatly exceeds the cognitive performance of humans in virtually all domains of interest" and we are yet to develop a single AI that can adapt to our varying needs or outperform us across several tasks. Obtaining a more general intelligence requires Lifelong Learning (LL) or more simply, an AI that can remember and learn from all of its life experiences like we do, as opposed to mastering a single environment. These traits are a necessity if we want to create AI's that can master more than a single environment. 
-
-Reinforcement Learning (RL) is the primary learning technique employed by AlphaGo and recent techniques for Lifelong RL (LLRL) have shown great success in getting an RL agent to generalise over one or two tasks.
+Reinforcement Learning (RL) is the primary learning technique employed by AlphaGo and recent techniques for Lifelong RL (LLRL) have shown great success in getting an RL agent to generalise over a handful of tasks.
 The problem with an RL agent such as AlphaGo learning multiple tasks however, is that each task's information must be stored in memory, and the more complex the task, the more information that needs to be remembered. We can see how scalability becomes an issue if an AI has to master more than a handful of tasks. 
 
-This thesis proposes the Kullback-Leibler Policy Chain approach which aims to help an RL agent to generalise over multiple tasks in a scalable manner. The proposed method of LLRL  draws upon techniques from the field of Information Theory that will allow an agent to gauge the importance of memories inherited from previously learned tasks. Inheriting useful information from previously completed tasks could be considered more scalable than storing each and every memory. 
-
-This thesis concerns the Kullback-Leibler Policy Chain method which helps an AI to generalise over several tasks in a scalable manner. Properties of the Kullback-Leibler divergence are exploited across specific polices to create a dependence between them. The need to store historic policies as some existing methods do is then greatly reduced with the introduction of a pseudo running total or a chain of these polices. Within this policy chain, we can say that the youngest link (i.e. policy for most recent task) will inherit the prevailing memories from older policies throughout the chain. 
+This thesis proposes the Kullback-Leibler Policy Chain approach which aims to help an RL agent to generalise over multiple tasks in a scalable manner. The proposed method of LLRL  draws upon techniques from the field of Information Theory that will allow an agent to gauge the importance of memories inherited from previously learned tasks. Inheriting useful information from previously completed tasks could be considered more scalable than storing each and every memory.  
 
 \newpage
 \onehalfspacing\raggedright %\raggedright turns off justification and hypenation

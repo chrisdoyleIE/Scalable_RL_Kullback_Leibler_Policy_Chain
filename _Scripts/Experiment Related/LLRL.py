@@ -1,30 +1,23 @@
-"""
-This part of code is the reinforcement learning brain, which is a brain of the agent.
-All decisions are made in here.
-
-Policy Gradient, Reinforcement Learning.
-
-View more on my tutorial page: https://morvanzhou.github.io/tutorials/
-
-Using:
-Tensorflow: 1.0
-gym: 0.8.0
-"""
-
-import numpy as np
+import numpy as np 
+import tensorflow as tf 
 import math
-import tensorflow as tf
 
-# reproducible
-np.random.seed(1)
-tf.set_random_seed(1)
+# -------------------------------------------------------------------------------------------------------------------------
+# REINFORCE in tf (Géron,2018)
+#-------------------------------------------------------------------------------------------------------------------------
 
+#  1. Monitor the agent as it explores the environment. At each step, compute the gradients to update actions accordingly (but do not apply).
+#  2. Compute each action's score after several episodes by applying the calculated gradients.
+#  3. Compute the mean of the resulting gradient vectors (of each episode), and use it to perform a Gradient Descent update.
+
+#  -------------------------------------------------------------------------------------------------------------------------
 
 class PolicyGradient:
     def __init__(
             self,
             n_actions,
             n_features,
+            gridworld_dims,
             learning_rate=0.01,
             reward_decay=0.95,
             output_graph=False,
@@ -33,6 +26,8 @@ class PolicyGradient:
         self.n_features = n_features
         self.lr = learning_rate
         self.gamma = reward_decay
+        self.gridworld_dims = gridworld_dims
+        self.policy = [[[]for col in range( self.gridworld_dims[1] )] for row in range( self.gridworld_dims[0] ) ]
 
         self.ep_obs, self.ep_as, self.ep_rs = [], [], []
 
@@ -102,7 +97,7 @@ class PolicyGradient:
         self.ep_rs.append(r)
 
         # EXPERIMENTAL OUTPUT
-        if flag: print('REWARDS: ',self.ep_rs)
+        #if flag: print('REWARDS: ',self.ep_rs)
 
     def learn(self):
         # discount and normalize episode reward
@@ -142,5 +137,13 @@ class PolicyGradient:
 
         return discounted_ep_rs
 
+    def return_policy(self):
+        for row in range(self.gridworld_dims[0]):
+            for col in range(self.gridworld_dims[1]):    
+                state = np.array([row,col])
+                self.policy[row][col] = self.sess.run(self.all_act_prob, feed_dict = {self.tf_obs: state[np.newaxis, :]})
+                #print("P(a|s = ", state, ") = ",self.policy[row][col])
+
+        return self.policy
 
 
