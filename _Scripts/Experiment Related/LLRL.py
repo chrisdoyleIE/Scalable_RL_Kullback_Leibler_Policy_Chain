@@ -30,6 +30,8 @@ class PolicyGradient:
         self.policy = [[[]for col in range( self.gridworld_dims[1] )] for row in range( self.gridworld_dims[0] ) ]
 
         self.ep_obs, self.ep_as, self.ep_rs = [], [], []
+        self.observations, self.actions, self.rewards = [], [], []
+        self.running_average = []
 
         self._build_net()
 
@@ -112,8 +114,12 @@ class PolicyGradient:
              self.tf_acts: np.array(self.ep_as),  # shape=[None, ]
              self.tf_vt: discounted_ep_rs_norm,  # shape=[None, ]
         })
+        # Save episode rewards
+        self.rewards.append( sum(self.ep_rs) )
+        self.running_average.append( sum(self.rewards) / len(self.rewards) )    # Running Average
 
-        self.ep_obs, self.ep_as, self.ep_rs = [], [], []    # empty episode data
+        # empty episode data
+        self.ep_obs, self.ep_as, self.ep_rs = [], [], []    
         return discounted_ep_rs_norm
 
     def _discount_and_norm_rewards(self):
@@ -137,13 +143,22 @@ class PolicyGradient:
 
         return discounted_ep_rs
 
-    def return_policy(self):
+    def save_policy(self, dir_for_run):
+
+        policy_dir = dir_for_run + '/policy.csv'
+        policy_file = open(policy_dir,"a")
+        policy_file.write("ROW,COL,UP,DOWN,LEFT,RIGHT\n")
+
+        # Write Policy to policy.csv
         for row in range(self.gridworld_dims[0]):
             for col in range(self.gridworld_dims[1]):    
                 state = np.array([row,col])
                 self.policy[row][col] = self.sess.run(self.all_act_prob, feed_dict = {self.tf_obs: state[np.newaxis, :]})
-                #print("P(a|s = ", state, ") = ",self.policy[row][col])
+                policy_file.write("[{},{}],{},{},{},{}\n".format(
+                                row,col,self.policy[row][col][0][0],self.policy[row][col][0][1],self.policy[row][col][0][2],self.policy[row][col][0][3]
+                                ))
 
-        return self.policy
+
+
 
 

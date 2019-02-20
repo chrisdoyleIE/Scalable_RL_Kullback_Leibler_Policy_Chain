@@ -22,11 +22,13 @@ import matplotlib.pyplot as plt
 #  Globals
 #---------------------------------------------------------------------------------------------------
 
-RENDER = False          # Saves the episode as a .gif into the Results/Logged Runs/ Run_X
-DISPLAY_REWARD = False  # Outputs reward and episode to the console
-LOG_RUN = True          # Whether of not you want to create a log file
+RENDER = False                  # Saves the episode as a .gif into the Results/Logged Runs/ Run_X
+DISPLAY_REWARD = False          # Outputs reward and episode to the console
+LOG_RUN = True                  # Whether of not you want to create a log file
+render_X_times = 1              # Set to 1 if you do not require to render GIFs
+display_reward_X_times = 10     # Set to 1 if you do not want to monitor training progress
 
-env = gw.GridWorldEnv(100)
+env = gw.GridWorldEnv( num_episodes =10 )
 env.seed(1)     # reproducible, general Policy gradient has high variance
 
 print(env.action_space)
@@ -43,14 +45,14 @@ LLRL = PolicyGradient(
     # output_graph=True,
 )
 
-for i_episode in range( env.num_episodes ):
+while(env.episode < env.num_episodes-1):
 
     observation = env.reset()
 
     # Set flags for display & render options
     RENDER, DISPLAY_REWARD = False, False
-    if (i_episode % (env.num_episodes / 1) == 0 and i_episode > 0): RENDER = True          
-    if (i_episode % (env.num_episodes / 10) == 0 and i_episode > 0): DISPLAY_REWARD = True
+    if (env.episode % (env.num_episodes / render_X_times) == 0 and env.episode > 0): RENDER = True          
+    if (env.episode % (env.num_episodes / display_reward_X_times) == 0 and env.episode > 0): DISPLAY_REWARD = True
 
 
     while True:
@@ -64,23 +66,26 @@ for i_episode in range( env.num_episodes ):
         if done:
             ep_rs_sum = sum(LLRL.ep_rs)
 
-            if i_episode == 0 :       
+            if env.episode == 0 :       
                 running_reward = ep_rs_sum           
             else:
                 running_reward_ = running_reward
                 running_reward = running_reward * 0.95 + ep_rs_sum * 0.05     
-                if LOG_RUN: env.log(i_episode,running_reward_, running_reward, ep_rs_sum)
+    
             
-            if DISPLAY_REWARD: print("episode:", i_episode, "  reward:", int(running_reward))
+            if DISPLAY_REWARD: print("episode:", env.episode, "  reward:", int(ep_rs_sum))
 
             vt = LLRL.learn()
             break
 
         observation = observation_
 
+    if (RENDER): env.save_episode()
 
-    if (RENDER): env.save_episode(i_episode)
-
+# Log episodes if desired
+if LOG_RUN: env.log(LLRL.rewards,LLRL.running_average)
 
 # Agent can now be considered trained
-trained_policy = LLRL.return_policy()
+LLRL.save_policy( env.dir_for_run )
+
+

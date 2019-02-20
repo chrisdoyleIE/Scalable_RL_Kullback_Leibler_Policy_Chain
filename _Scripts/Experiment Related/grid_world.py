@@ -54,14 +54,18 @@ class GridWorldEnv:
     def __init__(self, num_episodes):
 
         # Initialise Attributes
-        self.num_episodes = num_episodes
-        self.dims = np.array([12,12])
-        self.GW = np.ones(self.dims) # default value of grid is 1
-        self.colormap = 'nipy_spectral'
-        self.boundary_value = 0.95
-        self.agent_value = 0.25
-        self.reward_value = 0.75
-        self.goal_flag = 'N'
+        self.num_episodes = num_episodes            # number of episodes we will train our RL agent for
+        self.dims = np.array([12,12])               # dimensions of gridworld
+        self.GW = np.ones(self.dims)                # default value of grid is 1
+        self.colormap = 'nipy_spectral'             # color scheme for matshow() gridworld
+        self.boundary_value = 0.95                  # Vaule of gridworld where boundaries lie
+        self.agent_value = 0.25                     # Value of gridworld where agent is located
+        self.reward_value = 0.75                    # Value of gridworld where reward is located
+        self.goal_flag = 'N'                        # Used in naming convention for GIFs
+        self.episode = -1                           # Used in env.step(action) for terminus counter
+        self.default_reward_pos = np.array([2,2])   # Default Reward Position
+        self.steps_remaining = 30                   # Allowed number of steps that an agent can take
+        self.starting_pos = []                      # To record where the agent starts his adventure
 
         # Initialise Action Space {Up, Down, Left, Right}
         self.action_space = gym.spaces.Discrete(4)
@@ -80,21 +84,23 @@ class GridWorldEnv:
         # Create Directory for the run
         self.dir_for_run = 'Results/Logged Runs/'+ str(datetime.datetime.fromtimestamp(time.time()).strftime('%Y_%m_%d_%H:%M:%S'))
         os.mkdir(self.dir_for_run)
-        self.log_dir = self.dir_for_run + '/log.txt'
+        self.log_dir = self.dir_for_run + '/stats.csv'
         self.log_file = open(self.log_dir, "a")
-        self.log_file.write( 'Goal Reward: %d\nBoundary Reward: %d\nToo Many Steps: %d\nStep Reward: %d\n\n ' % (self.goal_reward,
-                                                                                                                self.boundary_reward,
-                                                                                                                self.too_many_steps_reward,
-                                                                                                                self.step_reward))
+        self.log_file.write('Grid Size: %d\r\nEpisdodes: %d\n\r\nReward Settings:\nGoal Reward: %d,Boundary Reward: %d,Too Many Steps: %d,Step Reward: %d\r\n' % (
+                            self.dims[0],self.num_episodes,self.goal_reward,self.boundary_reward,self.too_many_steps_reward,self.step_reward)
+                            )
+        self.log_file.close()
 
+
+        # Require to save cause of failure
+        self.terminus_states = []
+        self.terminus_count = np.zeros(3)  # (#Goal, #Boundary, #Steps)
 
         # See lines 81 - 85, cartpole.py from OpenAI
         self.seed()
         self.viewer = None
         self.state = None
-        self.steps_remaining = 30
         self.frame_number = 0
-
 
     def seed(self, seed=None):
         self.np_random, seed = seeding.np_random(seed)
@@ -105,6 +111,17 @@ class GridWorldEnv:
         assert self.action_space.contains(action), "%r (%s) invalid"%(action, type(action))
         agent_position = self.state
         reward = 0
+
+        # Account for initialising on top of reward
+        if( self.starting_pos[self.episode][0] == self.reward_position[0] and 
+            self.starting_pos[self.episode][1] == self.reward_position[1] ): 
+            self.goal_flag = 'Y'
+            self.terminus_states.append('GOAL')
+            self.terminus_count[0] += 1
+            return np.array(self.state), self.goal_reward, True, {}
+        
+        # Reduce remaining steps
+        self.steps_remaining -= 1   
         
         # Set Tile Agent has Left to Default Value
         self.GW[ self.state[0] ][ self.state[1] ] = 1
@@ -117,34 +134,40 @@ class GridWorldEnv:
         #print('AGENT: ', self.state, ', VALUE = ', self.GW[ self.state[0] ][ self.state[1] ],', ACTION = ',action )
 
         # Check if Done
-        done = bool( self.GW[self.state[0]][self.state[1]] == self.boundary_value )
+        done = bool((self.GW[self.state[0]][self.state[1]] == self.boundary_value) or 
+                    (self.steps_remaining == 0) or
+                    (self.GW[ self.state[0] ][ self.state[1] ] == self.reward_value)
+                    )
 
-        self.steps_remaining -= 1
-
+        
         if done:
-            # Agent has gone over the boundary
-            reward = self.boundary_reward
+            # Hit the boundary
+            if (self.GW[ self.state[0] ][ self.state[1] ] == self.boundary_value):
+                reward = self.boundary_reward
+                self.terminus_states.append('BOUNDARY')
+                self.terminus_count[1] += 1
 
-            # Update GridWorld to Show Agent Position
-            self.GW[self.state[0]][self.state[1]] = self.agent_value
-            return np.array(self.state), reward, done, {}
-
-        else:
             # Reached the Goal
-            if (self.GW[ self.state[0] ][ self.state[1] ] == self.reward_value):
+            elif (self.GW[ self.state[0] ][ self.state[1] ] == self.reward_value):
                 reward = self.goal_reward
                 done = True
                 self.goal_flag = 'Y'
-                #print('REWARD')
-            # Ran out of Steps
-            elif self.steps_remaining == 0:
-                done = True
+                self.terminus_states.append('GOAL')
+                self.terminus_count[0] += 1
+
+            # Ran out of steps
+            else: 
                 reward = self.too_many_steps_reward
-                #print('STEPS')
-            # Otherwise just continue onwards
-            else:
-                reward = self.step_reward
-                #reward = 0
+                self.terminus_states.append('STEPS')
+                self.terminus_count[2] += 1
+
+            # Update GridWorld to Show Agent Position (must be done after if checks)
+            self.GW[self.state[0]][self.state[1]] = self.agent_value
+            return np.array(self.state), reward, done, {}
+
+        # Otherwise continue as normal
+        else:
+            reward = self.step_reward
 
         # Update GridWorld to Show Agent Position
         self.GW[self.state[0]][self.state[1]] = self.agent_value
@@ -169,6 +192,9 @@ class GridWorldEnv:
 
     def reset(self):
 
+        # Incremment the episode number
+        self.episode += 1           
+
         # Open log file to write to 
         self.log_file = open(self.log_dir,"a")
 
@@ -187,38 +213,40 @@ class GridWorldEnv:
                 elif j == self.dims[1]-1: 
                     self.GW[i][j] = self.boundary_value
 
+        # Determine Reward Position
+        self.set_reward(fixed = True)
+
         # Reset Agent to Random Location
         self.state = np.array( [math.trunc( np.random.uniform(low = 1, high = self.dims[0] -1) ),
                                 math.trunc( np.random.uniform(low = 1, high = self.dims[1] -1) ) ]
                                 )
         self.GW[ self.state[0] ][ self.state[1] ] = self.agent_value
+        self.starting_pos.append(self.state)
         #print('AGENT: ',self.state)
-
-        # Determine Reward Position
-        self.set_reward(fixed = True, reward_pos = np.array([3,4]))
 
         # Reset Step Counter 
         self.steps_remaining = 20
         self.frame_number = 0
         self.goal_flag = 'N'
-   
+
         return np.array(self.state)
  
-    def set_reward(self, fixed, reward_pos = None):
+    def set_reward(self, fixed):
+
+        self.reward_position = self.default_reward_pos
 
         if not fixed:
-            # Reset Reward Position
-            reward_position = self.state
+            # Reset Reward Position such that the agent is on another tile
+            self.reward_position = self.state
 
             # Ensure that reward position is different to starting position
-            while np.array_equal( reward_position, self.state ):
-                    reward_position = np.array( [math.trunc( np.random.uniform(low = 1, high = self.dims[0] -1) ),
-                                                math.trunc( np.random.uniform(low = 1, high = self.dims[1] -1) ) ]
-                                                )
-        else:
-            reward_position = reward_pos
+            while np.array_equal( self.reward_position, self.state ):
+                    self.reward_position = np.array( [math.trunc( np.random.uniform(low = 1, high = self.dims[0] -1) ),
+                                                      math.trunc( np.random.uniform(low = 1, high = self.dims[1] -1) ) ]
+                                                    )
 
-        self.GW[reward_position[0]][reward_position[1]] = self.reward_value
+        self.GW[self.reward_position[0]][self.reward_position[1]] = self.reward_value
+        
         #print('REWARD: ',reward_position)
 
     def render_step(self):
@@ -254,7 +282,7 @@ class GridWorldEnv:
         self.frame_number += 1
         self.dir_created = False # Reset this boolean each to ensure directory for each run created correctly
 
-    def save_episode(self, episode_number):
+    def save_episode(self):
 
         # Ensure the frames are ordered correctly (sorted naturally so 9 < 10, i.e not 1, 10, 11, ..., 2, 20, 21, ...)
         temp_folder = os.listdir('Results/Temp')
@@ -271,13 +299,41 @@ class GridWorldEnv:
             os.remove(next_frame)
             #print('APPENDED: ', filename)
         
-        gif_name = self.dir_for_run + '/' + 'Episode_'+str(episode_number)+'_'+self.reward_flag+'.gif'
+        gif_name = self.dir_for_run + '/' + 'Episode_'+str(self.episode)+'_'+self.goal_flag+'.gif'
         imageio.mimsave( gif_name, images)
 
-    def log(self, i_episode, r_, r, ep_s):
-        #self.log_file.write("Episode: %d: %d = (%d * 0.95) + (%d * 0.01)\n" % (i_episode,r, r_, ep_s))
-        #self.log_file.write("%d   %d    %d    %d * 0.01)\n" % (i_episode,r, ep_s))
-        self.log_file.close()
-        #print("%d = (%d * 0.95) + (%d * 0.01)" % (r_, r, ep_s))
+    def log(self, episode_rewards, reward_running_average):
 
+        # Update the stats file
+        self.log_dir = self.dir_for_run + '/stats.csv'
+        self.log_file = open(self.log_dir,"a")
+        self.log_file.write('\nTerminus Occurences:\nGoal Count: {},Boundary Count: {}, Steps Count: {}\r\n'.format(
+                            self.terminus_count[0],self.terminus_count[1],self.terminus_count[2])
+                            )
+
+        denominator = self.terminus_count[0] + self.terminus_count[1] + self.terminus_count[2]
+        self.log_file.write('\nTerminus Statistics:\nGoal %: {},Boundary %: {}, Steps %: {}\r\n'.format(
+                            self.terminus_count[0]/denominator,self.terminus_count[1]/denominator,self.terminus_count[2]/denominator)
+                            )
+        self.log_file.close()
+
+        # Create a new log file
+        self.log_dir = self.dir_for_run + '/log.csv'
+        self.log_file = open(self.log_dir,"a")
+        self.log_file.write('Episode,Terminal State,Reward,Running Average\n')
+
+        # Fill the file with recorded results
+        for i in range( self.episode ): 
+            self.log_file.write('{},{},{},{},{}\n'.format(
+                                i+1,(str(self.starting_pos[i][0])+' '+str(self.starting_pos[i][1])),self.terminus_states[i],episode_rewards[i],reward_running_average[i]))
+        self.log_file.close()
+
+        # Create a plot of episode vs reward
+        episodes = range(1,self.num_episodes+1) # 1:100
+
+        plt.scatter(episodes , episode_rewards, s = 1)
+        plt.plot(episodes, reward_running_average,color='orange')
+        plt.xlabel('Episode')
+        plt.ylabel('Reward')
+        plt.savefig( (self.dir_for_run+'/'+'Episode vs Rewards') )
 

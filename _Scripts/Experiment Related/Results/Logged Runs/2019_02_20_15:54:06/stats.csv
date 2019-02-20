@@ -1,0 +1,5 @@
+Grid Size: 5
+Episdodes: 1000
+
+Reward Settings:
+Goal Reward: 1000000,Boundary Reward: -2000,Too Many Steps: -1000,Step Reward: -1
