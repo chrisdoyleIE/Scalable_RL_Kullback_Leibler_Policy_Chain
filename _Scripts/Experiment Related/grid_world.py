@@ -55,7 +55,7 @@ class GridWorldEnv:
 
         # Initialise Attributes
         self.num_episodes = num_episodes            # number of episodes we will train our RL agent for
-        self.dims = np.array([12,12])               # dimensions of gridworld
+        self.dims = np.array([5,5])               # dimensions of gridworld
         self.GW = np.ones(self.dims)                # default value of grid is 1
         self.colormap = 'nipy_spectral'             # color scheme for matshow() gridworld
         self.boundary_value = 0.95                  # Vaule of gridworld where boundaries lie
