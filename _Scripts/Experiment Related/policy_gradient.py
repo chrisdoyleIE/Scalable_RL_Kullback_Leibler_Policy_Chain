@@ -1,6 +1,10 @@
 import numpy as np 
 import tensorflow as tf 
 import math
+# For Plotting Purposes
+import matplotlib
+matplotlib.use('TkAgg')
+import matplotlib.pyplot as plt
 
 # -------------------------------------------------------------------------------------------------------------------------
 # REINFORCE in tf (Géron,2018)
@@ -33,11 +37,12 @@ class PolicyGradient:
         self.gamma = reward_decay
         self.gridworld_dims = gridworld_dims
         self.policy = [[[]for col in range( self.gridworld_dims[1] )] for row in range( self.gridworld_dims[0] ) ]
+        self.loss_values = []
 
         self.ep_obs, self.ep_as, self.ep_rs = [], [], []
         self.observations, self.actions, self.rewards = [], [], []
         self.running_average = []
-
+        self.dir_for_run = dir_for_run
         self._build_net()
 
         self.sess = tf.Session()
@@ -54,16 +59,18 @@ class PolicyGradient:
         # Attributes LLRL
         #------------------------------------------------------------------
 
-        self.dir_for_run = dir_for_run
         self.policy_files = []
         self.saver = tf.train.Saver()
+        self.ckpt_path = None
 
     def _build_net(self):
-        #with tf.name_scope('inputs'):
+
+        # NN PLACEHOLDERS
         self.tf_obs = tf.placeholder(tf.float32, [None, self.n_features], name="observations")
         self.tf_acts = tf.placeholder(tf.int32, [None, ], name="actions_num")
         self.tf_vt = tf.placeholder(tf.float32, [None, ], name="actions_value") #based on SUM of discounted rewards
 
+        # NN ARCHITECTURE
         # fc1
         layer = tf.layers.dense(
             inputs=self.tf_obs,
@@ -85,19 +92,21 @@ class PolicyGradient:
 
         self.all_act_prob = tf.nn.softmax(all_act, name='act_prob')  # use softmax to convert to probability
 
+        # LOSS FUNCTION
         #with tf.name_scope('loss'):
         # to maximize total reward (log_p * R) is to minimize -(log_p * R), and the tf only have minimize(loss)
-        neg_log_prob = tf.nn.sparse_softmax_cross_entropy_with_logits(logits=all_act, labels=self.tf_acts)   # this is negative log of chosen action
-        # or in this way:
-        # neg_log_prob = tf.reduce_sum(-tf.log(self.all_act_prob)*tf.one_hot(self.tf_acts, self.n_actions), axis=1)
-        loss = tf.reduce_mean(neg_log_prob * self.tf_vt)  # reward guided loss
+        self.neg_log_prob = tf.nn.sparse_softmax_cross_entropy_with_logits(logits=all_act, labels=self.tf_acts)   # this is negative log of chosen action
+        # logits = output from NN hidden layers before Softmax, labels = all actions taken in the episode
+        # Equivalent to : 
+        # nlp = tf.nn.softmax(logits)
+        # nlp = cross_entropy(nlp,self.tf_acts)
+        self.loss = tf.reduce_mean(self.neg_log_prob * self.tf_vt, name = 'loss') # reward guided loss, see project copybook
 
         with tf.name_scope('train'):
-            self.train_op = tf.train.AdamOptimizer(self.lr).minimize(loss)
+            self.train_op = tf.train.AdamOptimizer(self.lr).minimize(self.loss)
 
     def choose_action(self, observation, flag):
         prob_weights = self.sess.run(self.all_act_prob, feed_dict={self.tf_obs: observation[np.newaxis, :]})
-
         # EXPERIMENTAL OUTPUT
         #if flag: print('prob_weights',prob_weights)
 
@@ -115,24 +124,25 @@ class PolicyGradient:
         # EXPERIMENTAL OUTPUT
         #if flag: print('REWARDS: ',self.ep_rs)
 
-    def learn(self):
+    def learn(self, training = True):
         # discount and normalize episode reward
         discounted_ep_rs_norm = self._discount_and_norm_rewards()
         
         # EXPERIMENTAL OUTPUT
         #print('discounted_ep_rs_norm',discounted_ep_rs_norm)
 
-        # train on episode
-        # need to find what are predictions and what are labels
-        self.sess.run(self.train_op, feed_dict={
-             self.tf_obs: np.vstack(self.ep_obs),  # shape=[None, n_obs]
-             self.tf_acts: np.array(self.ep_as),  # shape=[None, ]
-             self.tf_vt: discounted_ep_rs_norm,  # shape=[None, ]
-        })
+        if training:
+            self.sess.run([self.train_op,self.loss], feed_dict={
+                self.tf_obs: np.vstack(self.ep_obs),  # shape=[None, n_obs]
+                self.tf_acts: np.array(self.ep_as),  # shape=[None, ]
+                self.tf_vt: discounted_ep_rs_norm,  # shape=[None, ]
+            })
+        #self.loss_values.append(loss_val)
         #
         # Save episode rewards
         self.rewards.append( sum(self.ep_rs) )
         self.running_average.append( sum(self.rewards) / len(self.rewards) )    # Running Average
+  
 
         # empty episode data
         self.ep_obs, self.ep_as, self.ep_rs = [], [], []    
@@ -146,6 +156,10 @@ class PolicyGradient:
         for t in reversed(range(0, len(self.ep_rs))):
             running_add = running_add * self.gamma + self.ep_rs[t]
             discounted_ep_rs[t] = running_add
+        # # Prioritise later actions
+        # for t in range(0, len(self.ep_rs)):
+        #     running_add = running_add * self.gamma + self.ep_rs[t]
+        #     discounted_ep_rs[t] = running_add
 
         # normalize episode rewards
         discounted_ep_rs -= np.mean(discounted_ep_rs)
@@ -166,19 +180,36 @@ class PolicyGradient:
         policy_csv.write("ROW,COL,UP,DOWN,LEFT,RIGHT\n")
 
         # Write Policy to policy.csv
-        for row in range(self.gridworld_dims[0]):
-            for col in range(self.gridworld_dims[1]):    
-                state = np.array([row,col])
-                self.policy[row][col] = self.sess.run(self.all_act_prob, feed_dict = {self.tf_obs: state[np.newaxis, :]})
-                policy_csv.write("[{},{}],{},{},{},{}\n".format(
-                                row,col,self.policy[row][col][0][0],self.policy[row][col][0][1],self.policy[row][col][0][2],self.policy[row][col][0][3]
-                                ))
+        for row in range(0,8):
+            for col in range(0,8):
+                    state = np.array([row,col])
+                    self.policy[row][col] = self.sess.run(self.all_act_prob, feed_dict = {self.tf_obs: state[np.newaxis, :]})
+                    policy_csv.write("[{},{}],{},{},{},{}\n".format(
+                                    row,col,self.policy[row][col][0][0],self.policy[row][col][0][1],self.policy[row][col][0][2],self.policy[row][col][0][3]
+                                    ))
 
-        policy_ckpt = self.dir_for_run + '/policy.cpkt'
-        self.saver.save(self.sess, policy_ckpt)
+        # Save tensorflow model policy checkpoint
+        self.ckpt_path = self.dir_for_run + '/policy.ckpt'
+        self.saver.save(self.sess, self.ckpt_path)
+        print('POLICY STORED')
+
+        # # Plot loss
+        # episodes = range(len(self.loss_values))
+        # plt.figure(2)
+        # plt.plot(episodes, self.loss_values)
+        # plt.xlabel('Episode')
+        # plt.ylabel('Loss')
+        # plt.savefig( (self.dir_for_run+'/'+'Learning Curve (Loss)') )
 
     def load_policy(self, policy_path):
+        graph_path = policy_path + '.meta'
+        self.saver = tf.train.import_meta_graph(graph_path)
         self.saver.restore(self.sess, policy_path)
-        print('policy successfully loaded')
+        print('POLICY LOADED')
 
+    def print_stats(self, episode):
+        # print("epsiode: {}, reward: {}, avg_reward: {}".format(
+        #     episode+1, sum(self.ep_rs), int(self.running_average[episode-1]) ))
 
+        print("epsiode: {}, reward: {}".format(
+            episode+1, sum(self.ep_rs) ))

@@ -51,21 +51,24 @@ class GridWorldEnv:
     #---------------------------
 
 
-    def __init__(self, num_episodes):
+    def __init__(self, num_episodes, default_reward_pos, training):
 
         # Initialise Attributes
-        self.num_episodes = num_episodes            # number of episodes we will train our RL agent for
-        self.dims = np.array([5,5])               # dimensions of gridworld
-        self.GW = np.ones(self.dims)                # default value of grid is 1
-        self.colormap = 'nipy_spectral'             # color scheme for matshow() gridworld
-        self.boundary_value = 0.95                  # Vaule of gridworld where boundaries lie
-        self.agent_value = 0.25                     # Value of gridworld where agent is located
-        self.reward_value = 0.75                    # Value of gridworld where reward is located
-        self.goal_flag = 'N'                        # Used in naming convention for GIFs
-        self.episode = -1                           # Used in env.step(action) for terminus counter
-        self.default_reward_pos = np.array([2,2])   # Default Reward Position
-        self.steps_remaining = 30                   # Allowed number of steps that an agent can take
-        self.starting_pos = []                      # To record where the agent starts his adventure
+        self.num_episodes = num_episodes                # number of episodes we will train our RL agent for
+        self.dims = np.array([8,8])                   # dimensions of gridworld
+        self.GW = np.ones(self.dims)                    # default value of grid is 1
+        self.colormap = 'nipy_spectral'                 # color scheme for matshow() gridworld
+        self.boundary_value = 0.95                      # Vaule of gridworld where boundaries lie
+        self.agent_value = 0.25                         # Value of gridworld where agent is located
+        self.reward_value = 0.75                        # Value of gridworld where reward is located
+        self.goal_flag = 'N'                            # Used in naming convention for GIFs
+        self.episode = 1                               # Used in env.step(action) for terminus counter
+        self.episodes = []                              # for debugging
+        self.default_reward_pos = default_reward_pos    # Default Reward Position
+        self.starting_pos = []                          # To record where the agent starts his adventure
+        self.states_visited = np.zeros(self.dims)       # Required to generate appropriate step reward
+        self.starting_pos.append([0,0])                 # Ensures starting_pos[episode] is correct
+        self.steps_initial = 30                       # Alllowed number of steps
 
         # Initialise Action Space {Up, Down, Left, Right}
         self.action_space = gym.spaces.Discrete(4)
@@ -76,25 +79,28 @@ class GridWorldEnv:
         self.observation_space = spaces.Box(low,high,dtype=np.float32)
 
          # Initialise Specific Reward Values
-        self.goal_reward = 1000000
-        self.boundary_reward = -2000
-        self.too_many_steps_reward = -1000
+        self.goal_reward = 100
+        self.boundary_reward = -100
         self.step_reward = -1
+        self.new_state_reward = 0
 
         # Create Directory for the run
-        self.dir_for_run = 'Results/Logged Runs/'+ str(datetime.datetime.fromtimestamp(time.time()).strftime('%Y_%m_%d_%H:%M:%S'))
+        if training: self.dir_for_run = 'Results/Logged Training Runs/'+ str(datetime.datetime.fromtimestamp(time.time()).strftime('%Y_%m_%d_%H:%M:%S'))
+        else: self.dir_for_run = 'Results/Logged Test Runs/'+ str(datetime.datetime.fromtimestamp(time.time()).strftime('%Y_%m_%d_%H:%M:%S'))
+
         os.mkdir(self.dir_for_run)
         self.log_dir = self.dir_for_run + '/stats.csv'
         self.log_file = open(self.log_dir, "a")
-        self.log_file.write('Grid Size: %d\r\nEpisdodes: %d\n\r\nReward Settings:\nGoal Reward: %d,Boundary Reward: %d,Too Many Steps: %d,Step Reward: %d\r\n' % (
-                            self.dims[0],self.num_episodes,self.goal_reward,self.boundary_reward,self.too_many_steps_reward,self.step_reward)
+        self.log_file.write('Grid Size: %d\r\nEpisdodes: %d\n\r\nReward Location: [%d %d]\nGoal Reward: %d,Boundary Reward: %d,New State Reward: %d,Step Reward: %d\r\n' % (
+                            self.dims[0],self.num_episodes,self.default_reward_pos[0],self.default_reward_pos[1],self.goal_reward,self.boundary_reward,self.new_state_reward,self.step_reward)
                             )
         self.log_file.close()
 
 
         # Require to save cause of failure
-        self.terminus_states = []
-        self.terminus_count = np.zeros(3)  # (#Goal, #Boundary, #Steps)
+        self.terminus_states = []                               # Label of Terminus state for each episode
+        self.terminus_count = np.zeros(3)                       # (#Goal, #Boundary, #Steps)
+        self.terminus_counts = np.zeros((self.num_episodes,3))    # For plotting representation of above
 
         # See lines 81 - 85, cartpole.py from OpenAI
         self.seed()
@@ -111,17 +117,17 @@ class GridWorldEnv:
         assert self.action_space.contains(action), "%r (%s) invalid"%(action, type(action))
         agent_position = self.state
         reward = 0
+        self.visited(self.state)
+        self.steps_remaining -= 1
 
         # Account for initialising on top of reward
-        if( self.starting_pos[self.episode][0] == self.reward_position[0] and 
-            self.starting_pos[self.episode][1] == self.reward_position[1] ): 
+        if( self.state[0] == self.default_reward_pos[0] and 
+            self.state[1] == self.default_reward_pos[1] ): 
             self.goal_flag = 'Y'
             self.terminus_states.append('GOAL')
             self.terminus_count[0] += 1
             return np.array(self.state), self.goal_reward, True, {}
         
-        # Reduce remaining steps
-        self.steps_remaining -= 1   
         
         # Set Tile Agent has Left to Default Value
         self.GW[ self.state[0] ][ self.state[1] ] = 1
@@ -135,9 +141,10 @@ class GridWorldEnv:
 
         # Check if Done
         done = bool((self.GW[self.state[0]][self.state[1]] == self.boundary_value) or 
-                    (self.steps_remaining == 0) or
-                    (self.GW[ self.state[0] ][ self.state[1] ] == self.reward_value)
+                    (self.GW[ self.state[0] ][ self.state[1] ] == self.reward_value) or
+                    (self.steps_remaining <= 0)
                     )
+        
 
         
         if done:
@@ -150,24 +157,27 @@ class GridWorldEnv:
             # Reached the Goal
             elif (self.GW[ self.state[0] ][ self.state[1] ] == self.reward_value):
                 reward = self.goal_reward
-                done = True
                 self.goal_flag = 'Y'
                 self.terminus_states.append('GOAL')
                 self.terminus_count[0] += 1
 
             # Ran out of steps
             else: 
-                reward = self.too_many_steps_reward
+                reward = self.step_reward
                 self.terminus_states.append('STEPS')
                 self.terminus_count[2] += 1
 
             # Update GridWorld to Show Agent Position (must be done after if checks)
             self.GW[self.state[0]][self.state[1]] = self.agent_value
+
             return np.array(self.state), reward, done, {}
 
         # Otherwise continue as normal
         else:
-            reward = self.step_reward
+            if self.is_visited(self.state): 
+                reward = self.step_reward             
+            else:
+                reward = self.new_state_reward        # Reward for entering a new state
 
         # Update GridWorld to Show Agent Position
         self.GW[self.state[0]][self.state[1]] = self.agent_value
@@ -193,13 +203,12 @@ class GridWorldEnv:
     def reset(self):
 
         # Incremment the episode number
-        self.episode += 1           
-
-        # Open log file to write to 
-        self.log_file = open(self.log_dir,"a")
+        #self.episode += 1 # incremented in top module file now.          
 
         # Reset GridWorld
         self.GW = np.ones(self.dims) 
+        self.states_visited = np.zeros(self.dims)
+        self.steps_remaining = self.steps_initial
         
         # Initialise Boundary of GridWorld
         for i in range( self.dims[0] ): 
@@ -216,7 +225,7 @@ class GridWorldEnv:
         # Determine Reward Position
         self.set_reward(fixed = True)
 
-        # Reset Agent to Random Location
+        #Reset Agent to Random Location
         self.state = np.array( [math.trunc( np.random.uniform(low = 1, high = self.dims[0] -1) ),
                                 math.trunc( np.random.uniform(low = 1, high = self.dims[1] -1) ) ]
                                 )
@@ -225,7 +234,6 @@ class GridWorldEnv:
         #print('AGENT: ',self.state)
 
         # Reset Step Counter 
-        self.steps_remaining = 20
         self.frame_number = 0
         self.goal_flag = 'N'
 
@@ -304,6 +312,7 @@ class GridWorldEnv:
 
     def log(self, episode_rewards, reward_running_average):
 
+
         # Update the stats file
         self.log_dir = self.dir_for_run + '/stats.csv'
         self.log_file = open(self.log_dir,"a")
@@ -320,20 +329,52 @@ class GridWorldEnv:
         # Create a new log file
         self.log_dir = self.dir_for_run + '/log.csv'
         self.log_file = open(self.log_dir,"a")
-        self.log_file.write('Episode,Terminal State,Reward,Running Average\n')
+        self.log_file.write('Episode,Starting Position,Steps,Terminal State,Reward,Running Average\n')
 
+        # DEBUG
+        # print(len(self.starting_pos), len(self.terminus_states), len(episode_rewards) , len(reward_running_average))
+        
         # Fill the file with recorded results
-        for i in range( self.episode ): 
-            self.log_file.write('{},{},{},{},{}\n'.format(
-                                i+1,(str(self.starting_pos[i][0])+' '+str(self.starting_pos[i][1])),self.terminus_states[i],episode_rewards[i],reward_running_average[i]))
+        for i in range(1,self.episode ): 
+            self.log_file.write('{},{},{},{},{},{}\n'.format(
+                                i,(str(self.starting_pos[i][0])+' '+str(self.starting_pos[i][1])),30 - self.steps_remaining,self.terminus_states[i-1],episode_rewards[i-1],reward_running_average[i-1]))
         self.log_file.close()
 
         # Create a plot of episode vs reward
-        episodes = range(1,self.num_episodes+1) # 1:100
+        episodes = np.asarray(range(1,self.num_episodes+1)) # 1:num_episodes (inclusive)
 
+        plt.figure(0)
         plt.scatter(episodes , episode_rewards, s = 1)
         plt.plot(episodes, reward_running_average,color='orange')
         plt.xlabel('Episode')
         plt.ylabel('Reward')
         plt.savefig( (self.dir_for_run+'/'+'Episode vs Rewards') )
 
+        
+        plt.figure(1)
+        plt.plot(episodes, self.terminus_counts[:,0])
+        plt.plot(episodes, self.terminus_counts[:,1])
+        plt.plot(episodes, self.terminus_counts[:,2])
+        plt.xlabel('Episode')
+        plt.ylabel('Total')
+        plt.legend(['Goals','Boundaries','Out of Steps'], loc = 'upper left')
+        plt.savefig( (self.dir_for_run+'/'+'Terminus State Breakdown with Time') )
+
+    def visited(self,state):
+        self.states_visited[self.state[0]][self.state[1]] = 1
+
+    def is_visited(self,state):
+        if self.states_visited[self.state[0]][self.state[1]] == 1: 
+            return True
+        else: 
+            return False
+
+    def increment_episode(self):
+        self.episode += 1
+        self.episodes.append(self.episode)
+
+    def update_terminus_totals(self):
+        # Update Terminus running totals
+        self.terminus_counts[self.episode-1][0] = self.terminus_count[0]
+        self.terminus_counts[self.episode-1][1] = self.terminus_count[1]
+        self.terminus_counts[self.episode-1][2] = self.terminus_count[2]

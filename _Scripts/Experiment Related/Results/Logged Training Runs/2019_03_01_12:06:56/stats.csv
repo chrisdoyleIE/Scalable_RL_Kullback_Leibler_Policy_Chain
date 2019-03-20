@@ -1,0 +1,5 @@
+Grid Size: 8
+Episdodes: 15000
+
+Reward Location: [3 3]
+Goal Reward: 100,Boundary Reward: -100,New State Reward: 0,Step Reward: -1

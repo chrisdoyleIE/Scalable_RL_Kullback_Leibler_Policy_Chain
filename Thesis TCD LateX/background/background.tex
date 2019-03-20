@@ -3,4 +3,31 @@
 This section covers the knowledge necessary to understand how the learning techniques in this thesis, and how information theory can be employed alongside these methods to facilitate continuous reinforcement learning (CRL). First we will look at Reinforcement Learning and the Policy Gradient Approaches that this thesis requires to facilitate CRL. The second second of this chapter explores how exactly information theory can measure the divergence between probability distributions, and how this relates back to CRL.
 
 \section{Reinforcement Learning}
-As discussed in Chapter 1, this thesis focusses primarily on model-free reinforcement learning (RL). Reinforcement learning is where an agent must interact with an environment in order to learn how to map situations to actions so as to maximize a numerical reward signal. The learner is not told which actions to take, but instead must discover which actions yield the most reward by trying them [1]. The environment in question can be said to be made up of a finite number of states which are described by the set $$\mathcal{S}$$. 
+As discussed in Chapter 1, this thesis focusses primarily on model-free reinforcement learning (RL). Reinforcement learning is where an agent must interact with an environment in order to learn how to map states to actions so as to maximize a numerical reward signal. The learner is not told which actions to take, but instead must discover which actions yield the most reward by trying them [1].  Reinforcement learning can be described mathematically to follow the terms defined within a Markov Decision Process (MDP):
+ \begin{itemize}
+$t$ : The step in time between actions and observations. 
+$\mathcal{S}$ : The set of all states contained within an environment.
+$\mathcal{A}$ : The 'action space' of all actions that an agent may take within a state (results in a transition in state).
+$\mathcal{T}$ : The state transition function, describes $P(s_{t+1} | s_t, a_t)$.
+$\mathcal{r}$ :  A numerical reward signal associated with every state transition. 
+\end{itemize}
+
+The environment example of an $N\times N$ grid is useful for clearly explaining the above concepts. consider each tile within the grid to be a unique state $s_t$, which all together are said to describe $\mathcal{S}$. A terminus state, $s_T$, is a state that ends the agents interaction with an environment. In the example of a gridworld, any $s_t$ that is on the boundary of the grid is considered a terminus state. Given any $s_i$ the agent can take one of four actions {up, down, left, right}. We have now described $\mathcal{A}$. Whatever action $a_i$ that we take in $s_t$ will dictate the next state $s_{t+1}$ that our agents visits. The reward for this state transition is $r$. We could create the gridworld environment such that $r$ is positive if the goal is reached (another example of a terminus state $s_T$), and negative if our agent hits a boundary. How we present rewards to our agent is of critical importance to any reinforcement learning problem as the agent learns to maximise the reward which may not coincide with mastering the environment if the reward signals are incorrect.
+
+\subsection{An Agent's Policy $\pi$}
+The policy $\pi$ of an agent is presented as the probability distribution of $\mathcal{A}$ given $\mathcal{S}$. Therefore, probability of an agent selecting any action $a_i$ within state $s_i$ is described by $\pi(a_i | s_i)$. It is important to note that the agents actions are always described by the policy, but not always dictated by it. Policy Methods are directed by the policy and choose actions in accordance with the distribution outlined by $\pi(\mathcal{A} | \mathcal{S})$. Value-iteration methods, however, focus of recording the rewards associated with state transitions, and then choosing transitions based on the maximum predicted future reward. The subtle difference here is that $\pi_{policy methods}$ are updated accordingly after the actions selected are analysed to be good or bad, whereas $\pi_{value iteration}$ is updated to simply describe the actions predicted in accordance with the value-iteration method employed to follow the maximum rewards. 
+
+\subsection{Discounted Rewards}
+ 
+\subsection{Policy Gradient Methods}
+
+\Section{Information Theory}
+Information theory is the study of the information contained within a signal. The field emerged from communication theory from a need to represent or analyse signals in a compressed manner. 
+
+\subsection{Entropy}
+
+\subsection{Kullback-Leibler Divergence}
+
+\section{Lifelong Learning Methods ('State of the Art')}
+
+
