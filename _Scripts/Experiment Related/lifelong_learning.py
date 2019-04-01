@@ -31,13 +31,14 @@ class LifelongLearning:
     def __init__(self):
         
         # INITIALISE ATTRIBUTES
-        self.lr = 0.001                  # Learning rate
+        self.lr = 0.001                 # Learning rate
         self.n_actions = 4              # Number of possible actions
         self.n_features = 2             # State observation
-        self.n_epochs = 3000            # Number of epochs for training
-        self.disp_X_times = 10         # Number of times training displayed
+        self.n_epochs = 1000               # Number of epochs for training
+        self.disp_X_times = 1            # Number of times training displayed
         self.dir_for_run = 'Results/CRL_training/'
         self.policy = [[[]for col in range( 0,8 )] for row in range(0,8 ) ]
+        self.delta = 0.000001            # to prevent divide by zero
 
     
         # Step 1: Initialise Graphs for each model
@@ -48,8 +49,8 @@ class LifelongLearning:
         self.sess.run(tf.global_variables_initializer())
         self.saver = tf.train.Saver()
         self.load_policies(
-            'Results/Stored_Policies/policy_R44_N8/policy.ckpt',
-            'Results/Stored_Policies/policy_R44_N8/policy.ckpt'
+            'Results/Stored_Policies/R22_N8/policy.ckpt',
+            'Results/Stored_Policies/R66_N8/policy.ckpt'
             )
 
         # Step 2: Create a uniform policy to begin with for the resulting policy
@@ -103,16 +104,76 @@ class LifelongLearning:
         with tf.name_scope('train'):
             self.train_op_crl = tf.train.AdamOptimizer(self.lr).minimize(self.neg_log_prob)
 
-    def variational_crl_loss(self, policy1, policy2):
+    def variational_crl_loss(self, policy1, policy2, inclusive = True):
 
-        # temporary implementation of loss function:
-        policy = 0.5 * ( np.asarray(policy1) + np.asarray(policy1) )
+        # # temporary implementation of loss function:
+        # policy = 0.5 * ( np.asarray(policy1) + np.asarray(policy1) )
 
-        # preprocessing of resulting distibution
-        policy = np.asarray(policy)
-        policy = policy.reshape(-1,4) # now, shape = (1,4) as required
-        return policy
+        #-------------------------------------------------------
+        # SEE 3.2.1 IN THESIS FOR INFORMATION ON CODE BELOW
+        #-------------------------------------------------------
 
+        # Kullback Leibler Divergence
+        def kullback_leibler(p,q, inclusive):
+
+            # Intialise kld value
+            kld = 0       
+
+            # See equation 3.4 in thesis
+            if inclusive: 
+                for i in range(0,4): 
+                    kld = kld + (p[i]*np.log(p[i]/(q[i]+self.delta)))
+            else:
+                for i in range(0,4): kld = kld + (q[i]*np.log(q[i]/(p[i]+self.delta)))
+
+            return kld            
+
+        # Loss function and gradient as defined in chapter 3 [Design] of VPC thesis
+        def loss_gradient(q,p1,p2,alpha, inclusive):
+
+            #  Section 3.2.1 first half
+            loss = (alpha * kullback_leibler(q, p1, inclusive)) + ((1 - alpha) * kullback_leibler(q, p2, inclusive)) 
+            gradient = np.zeros([4,])   # initialise gradient
+            
+
+            # Section 3.2.1 second half
+            if inclusive:
+                for i in range(0,4):
+                    gradient[i] = (1-alpha)*( p2[i]/(q[i]+self.delta) )- alpha*( p1[i]/(q[i]+self.delta) )
+                    if gradient[i] < -50: gradient[i] = -50
+            else:
+                for i in range(0,4):
+                    gradient[i] = (alpha)*(np.log(q[i]/p1[i]+self.delta)+1) + (1-alpha)*(np.log(q[i]/p2[i]+self.delta))
+                    if gradient[i] < -50: gradient[i] = -50
+            return loss, gradient
+        
+
+        q = np.full([4,], 0.25)                     # Initialise new policy as uniform distribution
+        p1 = np.reshape(np.asarray(policy1), [4,])  # Convert policies to np array format
+        p2 = np.reshape(np.asarray(policy2), [4,])
+        alpha = 0.4                    # alpha = 1/t, we have 2 polices to take information from
+        lr_new = 0.0001
+
+        # TEST OUTPUT
+        #print('P1, P2 = {}'.format(p1))
+
+        # Gradient Descent
+        for episode in range(1,100):
+            loss,gradient = loss_gradient(q,p1,p2,alpha, inclusive = False)    # Compute loss and gradient
+            q = q - (lr_new * gradient)                    # Perform gradient descent step
+            q_mask = q > 0
+            q = q * q_mask
+
+            # Monitor Progress
+            #if (episode % 100 == 0 and episode != 0): print('Episode: {}, Loss: {}'.format(episode,loss))
+
+        # Return New Policy
+        q = np.asarray(q)
+        q = q.reshape(-1,4) # Now shape = (1,4) as required
+        q = q / np.sum(q)   # Normalise q 
+        #print('q = {}'.format(q))
+        return q
+     
     def train_new_chain(self):
 
         # We want train the policy on every state
@@ -186,8 +247,6 @@ class LifelongLearning:
                     policy_csv.write("[{},{}],{},{},{},{}\n".format(
                                     row,col,self.policy[row][col][0][0],self.policy[row][col][0][1],self.policy[row][col][0][2],self.policy[row][col][0][3]
                                     ))
-
-
 
 
 
