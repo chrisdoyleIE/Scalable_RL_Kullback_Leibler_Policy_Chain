@@ -29,7 +29,7 @@ LOG_RUN = True                  # Whether of not you want to create a log file
 render_X_times = 1              # Set to 1 if you do not require to render GIFs
 display_reward_X_times = 10   # Set to 1 if you do not want to monitor training progress
 
-env = gw.GridWorldEnv( num_episodes =5000, default_reward_pos =  np.array([4,4]), training= True,  )
+env = gw.GridWorldEnv( num_episodes =2000, default_reward_pos =  np.array([3,6]), training= True,  )
 env.seed(1)     # reproducible, general Policy gradient has high variance
 
 
@@ -44,7 +44,7 @@ PG = PolicyGradient(
 )
 
 #PG.load_policy('Results/CRL_training/policy.ckpt')
-PG.load_policy('Results/Stored_Policies/R22_66/policy.ckpt')
+PG.load_policy('Results/Stored_Policies/R22_66_62_26_Ex/policy.ckpt')
 
 #---------------------------------------------------------------------------------------------------
 #  Training Phase
@@ -56,8 +56,7 @@ while(env.episode <= env.num_episodes): # env.episode begins at 1
 
     # Set flags for display & render options
     RENDER, DISPLAY_REWARD = False, False
-    #if (env.episode % (env.num_episodes / render_X_times) == 0 and env.episode > 0): RENDER = True    
-    if (env.episode > 980 and env.episode < 1001): RENDER = True          
+    if (env.episode % (env.num_episodes / render_X_times) == 0 and env.episode > 0): RENDER = True          
     if (env.episode % (env.num_episodes / display_reward_X_times) == 0 and env.episode > 0): DISPLAY_REWARD = True
 
 

@@ -1,0 +1,11 @@
+Grid Size: 8
+Episdodes: 2000
+
+Reward Location: [3 6]
+Goal Reward: 100,Boundary Reward: -100,New State Reward: 0,Step Reward: -1
+
+Terminus Occurences:
+Goal Count: 1369.0,Boundary Count: 568.0, Steps Count: 63.0
+
+Terminus Statistics:
+Goal %: 0.6845,Boundary %: 0.284, Steps %: 0.0315

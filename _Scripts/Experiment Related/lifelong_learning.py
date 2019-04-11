@@ -49,8 +49,8 @@ class LifelongLearning:
         self.sess.run(tf.global_variables_initializer())
         self.saver = tf.train.Saver()
         self.load_policies(
-            'Results/Stored_Policies/R22_N8/policy.ckpt',
-            'Results/Stored_Policies/R66_N8/policy.ckpt'
+            'Results/Stored_Policies/R26/policy.ckpt',
+            'Results/Stored_Policies/R22_66_62_Ex/policy.ckpt'
             )
 
         # Step 2: Create a uniform policy to begin with for the resulting policy
@@ -104,10 +104,7 @@ class LifelongLearning:
         with tf.name_scope('train'):
             self.train_op_crl = tf.train.AdamOptimizer(self.lr).minimize(self.neg_log_prob)
 
-    def variational_crl_loss(self, policy1, policy2, inclusive = True):
-
-        # # temporary implementation of loss function:
-        # policy = 0.5 * ( np.asarray(policy1) + np.asarray(policy1) )
+    def variational_crl_loss(self, policy1, policy2, inclusive = False):
 
         #-------------------------------------------------------
         # SEE 3.2.1 IN THESIS FOR INFORMATION ON CODE BELOW
@@ -233,6 +230,7 @@ class LifelongLearning:
         # Save tensorflow model policy checkpoint
         self.ckpt_path = self.dir_for_run + '/policy.ckpt'
         self.saver.save(self.sess, self.ckpt_path)
+        tf.summary.FileWriter("logs/", self.sess.graph)
 
         # Save Policy to .csv file for visualisation
         policy_csv = self.dir_for_run + '/policy.csv'

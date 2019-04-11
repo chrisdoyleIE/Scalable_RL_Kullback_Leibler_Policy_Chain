@@ -29,7 +29,7 @@ LOG_RUN = True                  # Whether of not you want to create a log file
 render_X_times = 1              # Set to 1 if you do not require to render GIFs
 display_reward_X_times = 10   # Set to 1 if you do not want to monitor training progress
 
-env = gw.GridWorldEnv( num_episodes =1000, default_reward_pos =  np.array([6,6]), training= True,  )
+env = gw.GridWorldEnv( num_episodes =1500, default_reward_pos =  np.array([4,4]), training= True,  )
 env.seed(1)     # reproducible, general Policy gradient has high variance
 
 

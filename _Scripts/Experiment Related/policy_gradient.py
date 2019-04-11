@@ -156,7 +156,7 @@ class PolicyGradient:
         for t in reversed(range(0, len(self.ep_rs))):
             running_add = running_add * self.gamma + self.ep_rs[t]
             discounted_ep_rs[t] = running_add
-        # # Prioritise later actions
+        # # Prioritise later actions
         # for t in range(0, len(self.ep_rs)):
         #     running_add = running_add * self.gamma + self.ep_rs[t]
         #     discounted_ep_rs[t] = running_add
